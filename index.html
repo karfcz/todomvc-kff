@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+	<title>KFF • TodoMVC</title>
+	<link rel="stylesheet" href="bower_components/todomvc-common/base.css">
+</head>
+<body>
+	<p data-kff-bind="app.state.filter:text"></p>
+	<section id="todoapp">
+		<header id="header">
+			<h1>todos</h1>
+			<input id="new-todo" placeholder="What needs to be done?" autofocus data-kff-bind="newTodo.title:val:p(trim):on(keyup):evf(enterKeyFilter)">
+		</header>
+		<!-- This section should be hidden by default and shown when there are todos -->
+		<section id="main" data-kff-bind="app.count:class(hidden, 0):p(int)">
+			<input id="toggle-all" type="checkbox" data-kff-bind="app.active:check:f(not):set(checkAll)">
+			<label for="toggle-all">Mark all as complete</label>
+			<ul id="todo-list">
+ 				<li data-kff-bind="app.items .completed:class(completed) .editing:class(editing)" data-kff-filter="app.filter">
+					<div class="view">
+						<input class="toggle" type="checkbox" data-kff-bind=".completed:check">
+						<label data-kff-bind=".title:text:f(uindex) .editing:dblclick(true):p(boolean)"> </label>
+						<button class="destroy" data-kff-bind="app:click:set(removeItem{*})"></button>
+					</div>
+					<input class="edit" value="" data-kff-view="todomvc.EditInputView" data-kff-bind=".editing:focusblur .title:val:p(trim) app:blur:set(removeIfEmpty{*})" data-kff-trigger="keyup:keyUpEdit blur:blur">
+				</li>
+			</ul>
+		</section>
+		<!-- This footer should hidden by default and shown when there are todos -->
+		<footer id="footer" data-kff-bind="app.count:class(hidden, 0):p(int)">
+			<!-- This should be `0 items left` by default -->
+			<span id="todo-count"><strong data-kff-bind="app.active:text">0</strong> <span data-kff-bind="app.active:text:f(pluralize{items})"></span> left</span>
+			<!-- Remove this if you don't implement routing -->
+			<ul id="filters">
+				<li>
+					<a class="selected" href="#/" data-kff-bind="app.state.filterBy:class(selected, null):p(null)">All</a>
+				</li>
+				<li>
+					<a href="#/active" data-kff-bind="app.state.filterBy:class(selected, active)">Active</a>
+				</li>
+				<li>
+					<a href="#/completed" data-kff-bind="app.state.filterBy:class(selected, completed)">Completed</a>
+				</li>
+			</ul>
+			<button id="clear-completed" data-kff-bind="app.completed:class(hidden, 0):p(int) app.completed:click:set(clearCompleted)">Clear completed (<span data-kff-bind="app.completed:text"></span>)</button>
+		</footer>
+	</section>
+	<footer id="info">
+		<p>Double-click to edit a todo</p>
+		<p>Created by <a href="http://twitter.com/karfcz">Karel Fučík</a></p>
+		<p>Part of <a href="http://todomvc.com">TodoMVC</a></p>
+	</footer>
+	<script src="bower_components/todomvc-common/base.js"></script>
+	<script src="js/kff.js"></script>
+	<script src="js/models.js"></script>
+	<script src="js/views.js"></script>
+	<script src="js/app.js"></script>
+</body>
+</html>

@@ -20,9 +20,9 @@
 			<ul id="todo-list">
  				<li data-kff-bind="app.items:each .completed:class(completed) .editing:class(editing)" data-kff-filter="app.filter">
 					<div class="view">
-						<input class="toggle" type="checkbox" data-kff-bind=".completed:check:dispatch">
+						<input class="toggle" type="checkbox" data-kff-bind=".completed:check:dispatch(setAndUpdate)">
 						<label data-kff-bind=".title:text:f(uindex) .editing:dblclick(true):dispatch"> </label>
-						<button class="destroy" data-kff-bind=".:click:dispatch(remove)"></button>
+						<button class="destroy" data-kff-bind=".:click:dispatch(removeAndUpdate)"></button>
 					</div>
 					<input class="edit" value="" data-kff-bind=".editing:focusblur:dispatch .editing:event(false):on(keyup):dispatch:evf(enterKey) .title:val:on(blur, keyup):p(trim):dispatch(removeIfEmpty):evf(blurOrEnter)">
 				</li>

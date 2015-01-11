@@ -1,5 +1,18 @@
 'todomvc' in window || (window.todomvc = {});
 
+var compose = function () {
+  var fns = arguments;
+
+  return function (result) {
+    for (var i = fns.length - 1; i > -1; i--) {
+      result = fns[i].call(this, result);
+    }
+
+    return result;
+  };
+};
+
+
 
 todomvc.app = {
 	filterBy: null,
@@ -27,9 +40,9 @@ todomvc.app = {
 	}
 };
 
-todomvc.actionNewItem = function(event, dispatcher)
+todomvc.actionNewItem = function(event)
 {
-	if(event.keyPath instanceof Array && event.model && typeof event.model === 'object')
+	if(event.value && event.keyPath instanceof Array && typeof event.model === 'object')
 	{
 		var propertyName = event.keyPath[0];
 		var pathArray = event.keyPath.slice(1);
@@ -45,40 +58,47 @@ todomvc.actionNewItem = function(event, dispatcher)
 			return items;
 
 		}, model.items);
-		dispatcher.trigger('update', model);
+
+		return {
+			action: 'update'
+		};
 	}
 };
 
-todomvc.actionUpdate = function(app, dispatcher)
+todomvc.actionUpdate = function(event)
 {
-	app = todomvc.app;
+	app = event.model;
 	app.completed = app.items.filter(function(item){ return item.completed }).length;
 	app.active = app.items.length - app.completed;
-	dispatcher.trigger('refresh');
+	return {
+		action: 'refresh'
+	};
 };
 
-todomvc.actionRemoveIfEmpty = function(event, dispatcher)
+todomvc.actionRemoveIfEmpty = function(event)
 {
-		console.log('set val', event.value)
+		console.log('set val', event)
 	if(event.value == '')
 	{
-		dispatcher.trigger('remove', {
+		return {
+			action: 'remove',
 			model: event.model,
 			keyPath: event.keyPath.slice(0, -1),
 			value: event.value
-		});
+		};
 	}
 	else
 	{
-		dispatcher.trigger('set', {
+		return {
+			action: 'set',
 			model: event.model,
 			keyPath: event.keyPath,
 			value: event.value
-		});
+		};
 	}
 };
 
-todomvc.actionCheckAll = function(event, dispatcher)
+todomvc.actionCheckAll = function(event)
 {
 	todomvc.app.items = todomvc.app.items.map(function(item){
 		if(item.completed !== event.value)
@@ -88,21 +108,36 @@ todomvc.actionCheckAll = function(event, dispatcher)
 		}
 		return item;
 	});
-	dispatcher.trigger('update');
+	return {
+		action: 'update'
+	};
 };
 
-todomvc.actionClearCompleted = function(event, dispatcher)
+todomvc.actionClearCompleted = function(event)
 {
 	todomvc.app.items = todomvc.app.items.filter(function(item){
 		return !item.completed;
 	});
-	dispatcher.trigger('update');
+	return {
+		action: 'update'
+	};
 };
 
-todomvc.actionRoute = function(event, dispatcher)
+todomvc.actionRoute = function(app)
 {
-	todomvc.app.filterBy = event.state.params.filterBy;
-	dispatcher.trigger('update');
+	return function(event)
+	{
+		console.log('route', event)
+		app.filterBy = event.state.params.filterBy;
+		return {
+			action: 'update'
+		};
+	}
+};
+
+todomvc.actionRoute.service = {
+	type: 'factory',
+	args: ['@todomvc.app']
 };
 
 todomvc.actionSave = function()
@@ -117,7 +152,10 @@ todomvc.actionLoad = function()
 	{
 		todomvc.app.items = window.JSON.parse(data);
 	}
-	dispatcher.trigger('update');
+	return {
+		action: 'update'
+	};
 };
+
 
 

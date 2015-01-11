@@ -8,7 +8,6 @@ todomvc.plurals = {
 
 todomvc.helpers = {
 	trim: function(v) {
-		console.log('trimming', v, v.replace(/^\s+|\s+$/g, ''))
 		return v.replace(/^\s+|\s+$/g, '');
 	},
 
@@ -37,25 +36,3 @@ todomvc.helpers = {
 	}
 
 };
-
-todomvc.MainView = kff.createClass({
-	extend: kff.PageView,
-	args: [{
-		models: {
-			app: '@todomvc.app'
-		},
-		helpers: todomvc.helpers
-	}]
-},
-/** @lends todomvc.MainView.prototype */
-{
-	/**
-	 * Main page view class
-	 * @param  {Object} options Options for the view
-	 */
-	constructor: function(options) {
-		kff.PageView.call(this, options);
-	}
-
-});
-

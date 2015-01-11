@@ -97,6 +97,8 @@
 			prev = prev[keypath[i]] = kfn.imclone(prev[keypath[i]]);
 		}
 
+		if(keypath[i] < 0) return root;
+
 		if(prev instanceof Array)
 		{
 			prev = prev.splice(keypath[i], 1);

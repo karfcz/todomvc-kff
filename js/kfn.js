@@ -44,7 +44,7 @@
 
 	kfn.mget = function(keypath)
 	{
-		return Array.prototype.reduce.bind(keypathToArray(keypath), maybe(function(prev, current){
+		return Array.prototype.reduce.bind(kfn.keyPathToArray(keypath), kfn.maybe(function(prev, current){
 			return prev[current];
 		}));
 	};

@@ -6,22 +6,40 @@
 	// Note that inserting todoApp and appModel objects to the window namespace
 	// is only for benchmarking purpose...
 
-
-	kff.actionSet = function(event)
+	kff.define('actionSet', function()
 	{
-		if(event.keyPath instanceof Array && event.model && typeof event.model === 'object')
+		return function(event)
 		{
-			var propertyName = event.keyPath[0];
-			var pathArray = event.keyPath.slice(1);
-			var model = event.model;
-			// console.log('event set', model, propertyName, pathArray, event.value)
-			model[propertyName] = kfn.imset(pathArray, event.value, model[propertyName]);
-			return {
-				action: 'refresh',
-				model: model
-			};
-		}
-	};
+			if(event.keyPath instanceof Array && event.model && typeof event.model === 'object')
+			{
+				var propertyName = event.keyPath[0];
+				var pathArray = event.keyPath.slice(1);
+				var model = event.model;
+				// console.log('event set', model, propertyName, pathArray, event.value)
+				model[propertyName] = kfn.imset(pathArray, event.value, model[propertyName]);
+				return {
+					action: 'refresh',
+					model: model
+				};
+			}
+		};
+
+	});
+	// kff.actionSet = function(event)
+	// {
+	// 	if(event.keyPath instanceof Array && event.model && typeof event.model === 'object')
+	// 	{
+	// 		var propertyName = event.keyPath[0];
+	// 		var pathArray = event.keyPath.slice(1);
+	// 		var model = event.model;
+	// 		// console.log('event set', model, propertyName, pathArray, event.value)
+	// 		model[propertyName] = kfn.imset(pathArray, event.value, model[propertyName]);
+	// 		return {
+	// 			action: 'refresh',
+	// 			model: model
+	// 		};
+	// 	}
+	// };
 
 	kff.actionRemove = function(event)
 	{
@@ -51,7 +69,7 @@
 		helpers: todomvc.helpers,
 		dispatcher: {
 			actions: {
-				set: kff.actionSet,
+				set: '@actionSet',
 				setAndUpdate: compose(todomvc.actionUpdate, kff.actionSet),
 				remove: kff.actionRemove,
 				removeAndUpdate: compose(todomvc.actionUpdate, kff.actionRemove),

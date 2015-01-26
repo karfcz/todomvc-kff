@@ -37,6 +37,11 @@ todomvc.app = {
 		if(f === 'completed') return item.completed === true;
 		else if(f === 'active') return item.completed !== true;
 		return true;
+	},
+	filterItems: function(items, filterBy)
+	{
+		console.log(arguments);
+		return items.filter(todomvc.app.filter);
 	}
 };
 
@@ -67,7 +72,7 @@ todomvc.actionNewItem = function(event)
 
 todomvc.actionUpdate = function(event)
 {
-	app = event.model;
+	app = event.model || todomvc.app;
 	app.completed = app.items.filter(function(item){ return item.completed }).length;
 	app.active = app.items.length - app.completed;
 	return {

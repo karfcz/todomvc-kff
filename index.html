@@ -18,7 +18,7 @@
 			<input id="toggle-all" type="checkbox" data-kff-bind="app.active:check:f(not):dispatch(checkAll)">
 			<label for="toggle-all">Mark all as complete</label>
 			<ul id="todo-list">
- 				<li data-kff-bind="app.items:each .completed:class(completed) .editing:class(editing)" data-kff-filter="app.filter">
+ 				<li data-kff-bind="app.items:each:filter(app.filter) .completed:class(completed) .editing:class(editing)">
 					<div class="view">
 						<input class="toggle" type="checkbox" data-kff-bind=".completed:check:dispatch(setAndUpdate)">
 						<label data-kff-bind=".title:text:f(uindex) .editing:dblclick(true):dispatch"> </label>

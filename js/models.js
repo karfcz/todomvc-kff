@@ -1,103 +1,88 @@
 'todomvc' in window || (window.todomvc = {});
 
-var compose = function () {
-  var fns = arguments;
-
-  return function (result) {
-    for (var i = fns.length - 1; i > -1; i--) {
-      result = fns[i].call(this, result);
-    }
-
-    return result;
-  };
-};
-
-
-
 todomvc.app = {
 	filterBy: null,
-	items: [
-		{
-			title: 'První TODO',
-			completed: false,
-			editing: false
-		},
-		{
-			title: 'Druhé TODO',
-			completed: true,
-			editing: false
-		}
-	],
+	items: [],
 	completed: null,
 	active: null,
 	newItemTitle: null,
-	filter: function(item)
-	{
-		var f = todomvc.app.filterBy;
-		if(f === 'completed') return item.completed === true;
-		else if(f === 'active') return item.completed !== true;
-		return true;
-	},
-	filterItems: function(items, filterBy)
-	{
-		console.log(arguments);
-		return items.filter(todomvc.app.filter);
-	}
 };
+
+function filterItem(item)
+{
+	var f = todomvc.app.filterBy;
+	if(f === 'completed') return item.completed === true;
+	else if(f === 'active') return item.completed !== true;
+	return true;
+}
+
+function actionSet(event)
+{
+	event.cursor.set(event.value);
+	return {
+		name: 'refresh',
+	};
+}
+
+function actionRemove(event)
+{
+	event.cursor.remove();
+	return {
+		name: 'refresh'
+	};
+}
 
 todomvc.actionNewItem = function(event)
 {
-	if(event.value && event.keyPath instanceof Array && typeof event.model === 'object')
-	{
-		var propertyName = event.keyPath[0];
-		var pathArray = event.keyPath.slice(1);
-		var model = event.model;
+	var itemsCursor = event.params[0];
+	if(event.value == '') return;
 
-		model.items = kfn.imset([], function(items){
+	itemsCursor.update(function(items){
+		items.push({
+			title: event.value,
+			completed: false,
+			editing: false
+		});
+		return items;
+	});
 
-			items.push({
-				title: event.value,
-				completed: false,
-				editing: false
-			});
-			return items;
-
-		}, model.items);
-
-		return {
-			action: 'update'
-		};
-	}
+	return {
+		name: 'update'
+	};
 };
 
 todomvc.actionUpdate = function(event)
 {
-	app = event.model || todomvc.app;
-	app.completed = app.items.filter(function(item){ return item.completed }).length;
-	app.active = app.items.length - app.completed;
-	return {
-		action: 'refresh'
-	};
+	var app = todomvc.app;
+	var cursor = new kff.Cursor(app);
+
+	cursor.refine(['completed']).set(app.items.filter(function(item){ return item.completed }).length);
+	cursor.refine(['active']).set(app.items.length - app.completed);
+
+	var es = new kff.EventStream();
+
+	kff.setZeroTimeout(function(){
+		es.trigger({ name: 'refresh' }).trigger({ name: 'save' }).end();
+	});
+
+	return es;
 };
 
 todomvc.actionRemoveIfEmpty = function(event)
 {
-		console.log('set val', event)
 	if(event.value == '')
 	{
 		return {
-			action: 'remove',
-			model: event.model,
-			keyPath: event.keyPath.slice(0, -1),
+			name: 'removeAndUpdate',
+			cursor: event.params[0],
 			value: event.value
 		};
 	}
 	else
 	{
 		return {
-			action: 'set',
-			model: event.model,
-			keyPath: event.keyPath,
+			name: 'setAndUpdate',
+			cursor: event.cursor,
 			value: event.value
 		};
 	}
@@ -105,37 +90,45 @@ todomvc.actionRemoveIfEmpty = function(event)
 
 todomvc.actionCheckAll = function(event)
 {
-	todomvc.app.items = todomvc.app.items.map(function(item){
-		if(item.completed !== event.value)
-		{
-			item = kfn.imclone(item);
-			item.completed = event.value;
-		}
-		return item;
-	});
+	var itemsCursor = event.params[0];
+
+	function mapItem(item){
+		return item.completed === event.value ? item : kff.imset(['completed'], event.value, item);
+	}
+
+	itemsCursor.update(kff.map(mapItem));
+
 	return {
-		action: 'update'
+		name: 'update'
 	};
 };
 
 todomvc.actionClearCompleted = function(event)
 {
-	todomvc.app.items = todomvc.app.items.filter(function(item){
-		return !item.completed;
+	var filter = kff.curry(function(fn, obj)
+	{
+		return obj.filter(fn);
 	});
+
+	function filterUncompletedItem(item){
+		return !item.completed;
+	}
+
+	event.cursor.update(filter(filterUncompletedItem));
+
 	return {
-		action: 'update'
+		name: 'update'
 	};
 };
 
 todomvc.actionRoute = function(app)
 {
+	var cursor = new kff.Cursor(app, ['filterBy']);
 	return function(event)
 	{
-		console.log('route', event)
-		app.filterBy = event.state.params.filterBy;
+		cursor.set(event.state.params.filterBy);
 		return {
-			action: 'update'
+			name: 'update'
 		};
 	}
 };
@@ -158,9 +151,6 @@ todomvc.actionLoad = function()
 		todomvc.app.items = window.JSON.parse(data);
 	}
 	return {
-		action: 'update'
+		name: 'update'
 	};
 };
-
-
-

@@ -1,165 +1,25 @@
 /**
  * KFF Frontend Framework v2.0.0-alpha.2
- * (c) 2008-2014 Karel Fučík
+ * (c) 2008-2015 Karel Fučík
  * License: MIT
  * https://github.com/karfcz/kff
  */
-(function(scope)
+(function()
 {
-	var kff;
+	var kff = {};
+	var scope = null;
 
-	if(typeof exports !== 'undefined') kff = exports;
+	if(typeof module !== 'undefined' && typeof module.exports !== 'undefined') module.exports = kff;
 	/**
 	 * @namespace kff KFFnamespace
 	 */
-	else kff = 'kff' in scope ? scope.kff : (scope.kff = {}) ;
-	kff.widgets = {};
-
-// EventListener | @jon_neal | //github.com/jonathantneal/EventListener
-
-if(typeof window === 'object' && window !== null)
-{
-	(function(){
-
-		!this.addEventListener && this.Element && (function () {
-			function addToPrototype(name, method) {
-				Window.prototype[name] = HTMLDocument.prototype[name] = Element.prototype[name] = method;
-			}
-
-			var registry = [];
-
-			addToPrototype("addEventListener", function (type, listener) {
-				var target = this;
-
-				registry.unshift({
-					__listener: function (event) {
-						event.currentTarget = target;
-						event.pageX = event.clientX + document.documentElement.scrollLeft;
-						event.pageY = event.clientY + document.documentElement.scrollTop;
-						event.preventDefault = function () { event.returnValue = false };
-						if(event.type === 'mouseleave' || event.type === 'mouseout') {
-							event.relatedTarget = event.toElement || null;
-						}
-						else {
-							event.relatedTarget = event.fromElement || null;
-						}
-						event.stopPropagation = function () { event.cancelBubble = true };
-						event.target = event.srcElement || target;
-						event.timeStamp = +new Date;
-
-						listener.call(target, event);
-					},
-					listener: listener,
-					target: target,
-					type: type
-				});
-
-				this.attachEvent("on" + type, registry[0].__listener);
-			});
-
-			addToPrototype("removeEventListener", function (type, listener) {
-				for (var index = 0, length = registry.length; index < length; ++index) {
-					if (registry[index].target == this && registry[index].type == type && registry[index].listener == listener) {
-						return this.detachEvent("on" + type, registry.splice(index, 1)[0].__listener);
-					}
-				}
-			});
-
-			addToPrototype("dispatchEvent", function (eventObject) {
-				try {
-					return this.fireEvent("on" + eventObject.type, eventObject);
-				} catch (error) {
-					for (var index = 0, length = registry.length; index < length; ++index) {
-						if (registry[index].target == this && registry[index].type == eventObject.type) {
-							registry[index].call(this, eventObject);
-						}
-					}
-				}
-			});
-		})();
-
-	})();
+	else if(typeof window !== 'undefined')
+	{
+		window.kff = kff;
+		scope = window;
+	}
 
 
-	// ClassList polyfill for IE8/9
-	(function () {
-
-		if (typeof window.Element === "undefined" || "classList" in document.documentElement) return;
-
-		var prototype = Array.prototype,
-			push = prototype.push,
-			splice = prototype.splice,
-			join = prototype.join;
-
-		function DOMTokenList(el) {
-			this.el = el;
-			// The className needs to be trimmed and split on whitespace
-			// to retrieve a list of classes.
-			var classes = el.className.replace(/^\s+|\s+$/g,'').split(/\s+/);
-			for (var i = 0; i < classes.length; i++) {
-				push.call(this, classes[i]);
-			}
-		};
-
-		DOMTokenList.prototype =
-		{
-			add: function(token) {
-				if(this.contains(token)) return;
-				push.call(this, token);
-				this.el.className = this.toString();
-			},
-
-			contains: function(token) {
-				return this.el.className.indexOf(token) != -1;
-			},
-
-			item: function(index) {
-				return this[index] || null;
-			},
-
-			remove: function(token) {
-				if (!this.contains(token)) return;
-					for (var i = 0; i < this.length; i++) {
-						if (this[i] == token) break;
-					}
-					splice.call(this, i, 1);
-				this.el.className = this.toString();
-			},
-
-			toString: function() {
-				return join.call(this, ' ');
-			},
-
-			toggle: function(token) {
-				if (!this.contains(token)) {
-					this.add(token);
-				} else {
-					this.remove(token);
-				}
-
-				return this.contains(token);
-			}
-		};
-
-		window.DOMTokenList = DOMTokenList;
-
-		function defineElementGetter (obj, prop, getter) {
-			if (Object.defineProperty) {
-				Object.defineProperty(obj, prop,{
-					get : getter
-				});
-			} else {
-				obj.__defineGetter__(prop, getter);
-			}
-		}
-
-		defineElementGetter(Element.prototype, 'classList', function () {
-			return new DOMTokenList(this);
-		});
-
-	})();
-
-}
 
 /**
  * Data-attribute name used for view names
@@ -185,29 +45,6 @@ kff.DATA_RENDERED_ATTR = 'data-kff-rendered';
  */
 kff.DATA_BIND_ATTR = 'data-kff-bind';
 
-/**
- * Data-attribute name used for event triggers
- * @constant
- */
-kff.DATA_TRIGGER_ATTR = 'data-kff-trigger';
-
-/**
- * Data-attribute name used for collection filtering
- * @constant
- */
-kff.DATA_FILTER_ATTR = 'data-kff-filter';
-
-/**
- * Data-attribute name used for collection sorting
- * @constant
- */
-kff.DATA_SORT_ATTR = 'data-kff-sort';
-
-/**
- * Data-attribute name used forcollection count
- * @constant
- */
-kff.DATA_COUNT_ATTR = 'data-kff-count';
 
 kff.debug = false;
 
@@ -266,19 +103,20 @@ kff.mixins = function(obj, properties)
 	while(i < l)
 	{
 		props = arguments[i];
-		for(key in props)
+
+		var keys = Object.keys(props);
+
+		for(var j = 0, k = keys.length; j < k; j++)
 		{
-			if(props.hasOwnProperty(key))
+			key = keys[j];
+			prop = props[key];
+			if(deep && kff.isPlainObject(prop))
 			{
-				prop = props[key];
-				if(deep && kff.isPlainObject(prop))
-				{
-					objProp = obj[key];
-					if(typeof objProp !== 'object' || objProp === null) objProp = {};
-					kff.mixins(objProp, prop, deep);
-				}
-				else obj[key] = prop;
+				objProp = obj[key];
+				if(typeof objProp !== 'object' || objProp === null) obj[key] = objProp = {};
+				kff.mixins(objProp, prop, deep);
 			}
+			else obj[key] = prop;
 		}
 		i++;
 	}
@@ -335,10 +173,6 @@ kff.createClass = function(meta, properties)
 	for(var i = 0, l = meta.mixins.length; i < l; i++) kff.mixins(properties, meta.mixins[i]);
 
 	// Static properties of constructor
-	if(meta.staticProperties)
-	{
-		kff.mixins(constructor, meta.staticProperties);
-	}
 
 	if(meta.statics)
 	{
@@ -480,7 +314,7 @@ kff.setZeroTimeout = function(fn)
 
 	if('postMessage' in window && 'addEventListener' in window && !('attachEvent' in window))
 	{
-		kff.setZeroTimeout = function(fn)
+		kff.setImmediate = kff.setZeroTimeout = function(fn)
 		{
 			callbacks.push(fn);
 			window.postMessage(messageName, '*');
@@ -489,7 +323,7 @@ kff.setZeroTimeout = function(fn)
 	}
 	else
 	{
-		kff.setZeroTimeout = function(fn)
+		kff.setImmediate = kff.setZeroTimeout = function(fn)
 		{
 			setTimeout(fn, 0);
 		};
@@ -498,6 +332,7 @@ kff.setZeroTimeout = function(fn)
 	kff.setZeroTimeout(fn);
 };
 
+kff.setImmediate = kff.setZeroTimeout;
 
 /**
  * Returns index of an item in an array or -1 if not found
@@ -579,7 +414,7 @@ kff.require = function(serviceName)
 			return kff.evalObjectPath(serviceName.slice(4), kff);
 		}
 	}
-	return kff.evalObjectPath(serviceName);
+	return null;
 };
 
 /**
@@ -596,9 +431,76 @@ kff.log = function(message)
  */
 kff.noop = function(){};
 
+/**
+ * Compare if two arrays are of the same length and contain the same values compared by the strict equal operator
+ *
+ * @param  {Array} value1 Array 1
+ * @param  {Array} value2 Array 2
+ * @return {boolean}      Result of comparsion
+ */
+kff.compareArrays = function(value1, value2)
+{
+	if((value1 instanceof Array) && (value2 instanceof Array))
+	{
+		var l = value1.length;
+		if(l !== value2.length) return false;
+		for(var i = 0; i < l; i++)
+		{
+			if(value1[i] !== value2[i]) return false;
+		}
+		return true;
+	}
+	else return false;
+};
 
 
-kff.imClone = function(obj)
+kff.curry = function(fn, arity)
+{
+	var __slice = Array.prototype.slice;
+	arity = arity || fn.length;
+
+	return given([]);
+
+	function given(argsSoFar)
+	{
+		return function helper()
+		{
+			var updatedArgsSoFar = argsSoFar.concat(__slice.call(arguments, 0));
+
+			if (updatedArgsSoFar.length >= arity) {
+				return fn.apply(this, updatedArgsSoFar)
+			}
+			else return given(updatedArgsSoFar)
+		}
+	}
+};
+
+// kff.curry = function(fn)
+// {
+// 	var args = Array.prototype.slice.call(arguments, 1);
+// 	return fn.bind.apply(fn, [this].concat(args);
+// };
+
+kff.compose = function()
+{
+	var fns = arguments;
+	return function(result)
+	{
+		for(var i = fns.length - 1; i > -1; i--)
+		{
+			result = fns[i].call(this, result);
+		}
+		return result;
+	};
+};
+
+kff.map = kff.curry(function(fn, obj)
+{
+	return obj.map(fn);
+});
+
+
+kff.imclone = function(obj)
 {
 	if(obj instanceof Array) return obj.slice();
 	if(typeof obj === 'object')
@@ -613,48 +515,175 @@ kff.imClone = function(obj)
 	return obj;
 };
 
-kff.imSet = function(keypath, value, obj)
+kff.imset = function(keypath, value, obj)
 {
 	var fn = value;
+	var root;
 	if(typeof fn !== 'function') fn = function(){ return value; };
-	if(typeof keypath === 'string') keypath = keypath.split('.');
 
-	var root = kff.imClone(obj);
-	var prev = root;
-	if(keypath.length === 0) return fn(root);
-
-	for(var i = 0, l = keypath.length; i < l - 1; i++)
+	if(keypath)
 	{
-		prev = prev[keypath[i]] = kff.imClone(prev[keypath[i]]);
-	}
+		if(typeof keypath === 'string') keypath = keypath.split('.');
 
-	prev[keypath[i]] = fn(prev[keypath[i]]);
+		root = kff.imclone(obj);
+		var prev = root;
+
+		if(keypath.length === 0) return fn(root);
+
+		for(var i = 0, l = keypath.length; i < l - 1; i++)
+		{
+			prev = prev[keypath[i]] = kff.imclone(prev[keypath[i]]);
+		}
+
+		prev[keypath[i]] = fn(prev[keypath[i]]);
+	}
+	else
+	{
+		root = fn(obj);
+	}
 
 	return root;
 };
 
-kff.imRemove = function(keypath, obj)
+kff.imremove = function(keypath, obj)
 {
 	if(typeof keypath === 'string') keypath = keypath.split('.');
 
-	var root = kff.imClone(obj);
-	var prev = root;
+	if(keypath)
+	{
+		var root = kff.imclone(obj);
+		var prev = root;
 
-	for(var i = 0, l = keypath.length; i < l - 1; i++)
-	{
-		prev = prev[keypath[i]] = kff.imClone(prev[keypath[i]]);
+		for(var i = 0, l = keypath.length; i < l - 1; i++)
+		{
+			prev = prev[keypath[i]] = kff.imclone(prev[keypath[i]]);
+		}
+		if(prev instanceof Array)
+		{
+			prev = prev.splice(keypath[i], 1);
+		}
+		else if(typeof prev === 'object' && prev !== null)
+		{
+			delete prev[keypath[i]];
+		}
 	}
 
-	if(prev instanceof Array)
-	{
-		prev = prev.splice(keypath[i], 1);
-	}
-	else if(typeof prev === 'object' && prev !== null)
-	{
-		delete prev[keypath[i]];
-	}
 	return root;
 };
+
+
+kff.functionService = function(fn)
+{
+	var fn2 = function()
+	{
+		return fn.apply(this, arguments);
+	};
+	fn2.service = { type: 'function'};
+	return fn2;
+};
+
+kff.factoryService = function(fn)
+{
+	var fn2 = function()
+	{
+		return fn.apply(this, arguments);
+	};
+	fn2.service = { type: 'factory' };
+	if(arguments.length > 1) fn2.service.args = Array.prototype.slice.call(arguments, 1);
+	return fn2;
+};
+
+
+kff.arrayConcat = function(a1, a2)
+{
+	var l1 = a1.length, l2 = a2.length, l3 = l1 + l2; i = 0;
+	var a3 = new Array(l3);
+	while(i < l1)
+	{
+		a3[i] = a1[i];
+		i++;
+	}
+	while(i < l3)
+	{
+		a3[i] = a2[i - l1];
+		i++
+	}
+	return a3;
+};
+
+kff.Cursor = kff.createClass(
+{
+	constructor: function(root, keyPath)
+	{
+		this.root = root;
+		this.keyPath = keyPath || [];
+	},
+
+	refine: function(keyPath)
+	{
+		if(typeof keyPath === 'string') keyPath = keyPath.split('.');
+		return new kff.Cursor(this.root, kff.arrayConcat(this.keyPath, keyPath));
+	},
+
+	get: function()
+	{
+		return kff.evalObjectPath(this.keyPath, this.root);
+	},
+
+	getIn: function(keyPath)
+	{
+		return kff.evalObjectPath(this.keyPath.concat(keyPath), this.root);
+	},
+
+	set: function(value)
+	{
+		var prop;
+		if(this.keyPath.length === 0)
+		{
+			if(typeof value === 'object' && value !== null)
+			{
+				for(prop in value)
+				{
+					this.root[prop] = kff.imset([], value[prop], this.root[prop]);
+				}
+			}
+		}
+		else
+		{
+			prop = this.keyPath[0];
+			var keyPath = this.keyPath.slice(1);
+			this.root[prop] = kff.imset(keyPath, value, this.root[prop]);
+		}
+	},
+
+	setIn: function(path, value)
+	{
+		this.refine(path).set(value);
+	},
+
+	update: function(fn)
+	{
+		if(this.keyPath.length < 1) return;
+		var prop = this.keyPath[0];
+		var keyPath = this.keyPath.slice(1);
+		this.root[prop] = kff.imset(keyPath, fn, this.root[prop]);
+	},
+
+	remove: function()
+	{
+		if(this.keyPath.length < 1) return;
+		var prop = this.keyPath[0];
+		var keyPath = this.keyPath.slice(1);
+		this.root[prop] = kff.imremove(keyPath, this.root[prop]);
+	},
+
+	equalsTo: function(cursor)
+	{
+		if(!cursor || cursor.root !== this.root) return false;
+		return kff.compareArrays(this.keyPath, cursor.keyPath);
+	}
+
+});
 
 
 kff.useJquery = true;
@@ -838,6 +867,215 @@ kff.$ = function(element)
 
 var $ = kff.$;
 
+kff.EventStream = kff.createClass({
+	statics: {
+		END: {}
+	}
+},
+/** @lends kff.EventStream.prototype */
+{
+	/**
+	 * @constructs
+	 */
+	constructor: function()
+	{
+		this.subscribers = [];
+		this.oneSubscribers = [];
+	},
+
+	/**
+	 * Binds event handler.
+	 *
+	 * @param {string|Array} eventType Event name(s)
+	 * @param {function} fn Event handler
+	 */
+	on: function(fn)
+	{
+		if(kff.arrayIndexOf(this.subscribers, fn) === -1) this.subscribers.push(fn);
+		return this;
+	},
+
+	/**
+	 * Binds event handler that will be executed only once.
+	 *
+	 * @param {string|Array} eventType Event name(s)
+	 * @param {function} fn Event handler
+	 */
+	one: function(eventType, fn)
+	{
+		this.oneSubscribers.push(fn);
+		return this.on(fn);
+	},
+
+	/**
+	 * Unbinds event handler.
+	 *
+	 * @param {string|Array} eventType Event name(s)
+	 * @param {function} fn Event handler
+	 */
+	off: function(fn)
+	{
+		var i = kff.arrayIndexOf(this.subscribers, fn);
+		if(i !== -1) this.subscribers.splice(i, 1);
+
+		i = kff.arrayIndexOf(this.oneSubscribers, fn);
+		if(i !== -1) this.oneSubscribers.splice(i, 1);
+
+		return this;
+	},
+
+	offAll: function()
+	{
+		this.subscribers = [];
+		this.oneSubscribers = [];
+		return this;
+	},
+
+	/**
+	 * Triggers an event.
+	 *
+	 * @param {string|Array} eventType Event name(s)
+	 * @param {mixed} eventData Arbitrary data that will be passed to the event handlers as an argument
+	 */
+	trigger: function(eventData)
+	{
+		var i, l;
+
+		if(eventData === kff.EventStream.END)
+		{
+			return this.offAll();
+		}
+
+		for(i = 0, l = this.subscribers.length; i < l; i++)
+		{
+			if(typeof this.subscribers[i] === 'function') this.subscribers[i].call(null, eventData);
+		}
+
+		// Remove "one" subscribers:
+		for(i = 0, l = this.oneSubscribers.length; i < l; i++)
+		{
+			this.off(this.oneSubscribers[i]);
+		}
+
+
+		return this;
+	},
+
+	map: function(fn)
+	{
+		var mes = new kff.EventStream();
+
+		this.on(function(event){
+			mes.trigger(fn.call(null, event));
+		});
+
+		return mes;
+	},
+
+	filter: function(fn)
+	{
+		var fes = new kff.EventStream();
+
+		this.on(function(event){
+			if(fn.call(null, event)) fes.trigger(event);
+		});
+
+		return fes;
+	},
+
+	merge: function(es)
+	{
+		var mes = new kff.EventStream();
+
+		this.on(mes.f('trigger'));
+		es.on(mes.f('trigger'));
+
+		return mes;
+	},
+
+	end: function()
+	{
+		this.trigger(kff.EventStream.END);
+	}
+
+
+});
+
+
+
+
+
+
+
+// kff.es = {};
+
+// kff.es.createStream = function()
+// {
+// 	return {
+// 		subscribers: [],
+// 		oneSubscribers: []
+// 	};
+// };
+
+// kff.es.on = function(fn, stream)
+// {
+// 	var newStream = {
+// 		subscribers: null,
+// 		oneSubscribers: null
+// 	};
+
+// 	if(kff.arrayIndexOf(stream.subscribers, fn) === -1) {
+// 		newStream.subscribers = stream.subscribers.concat(fn);
+// 	}
+
+// 	return newStream;
+// };
+
+
+// 	on: function(fn)
+// 	{
+// 		if(kff.arrayIndexOf(this.subscribers, fn) === -1) this.subscribers.push(fn);
+// 		return this;
+// 	},
+
+// 	*
+// 	 * Binds event handler that will be executed only once.
+// 	 *
+// 	 * @param {string|Array} eventType Event name(s)
+// 	 * @param {function} fn Event handler
+
+// 	one: function(eventType, fn)
+// 	{
+// 		this.oneSubscribers.push(fn);
+// 		return this.on(fn);
+// 	},
+
+// 	/**
+// 	 * Unbinds event handler.
+// 	 *
+// 	 * @param {string|Array} eventType Event name(s)
+// 	 * @param {function} fn Event handler
+// 	 */
+// 	off: function(fn)
+// 	{
+// 		var i = kff.arrayIndexOf(this.subscribers, fn);
+// 		if(i !== -1) this.subscribers.splice(i, 1);
+
+// 		i = kff.arrayIndexOf(this.oneSubscribers, fn);
+// 		if(i !== -1) this.oneSubscribers.splice(i, 1);
+
+// 		return this;
+// 	},
+
+// 	offAll: function()
+// 	{
+// 		this.subscribers = [];
+// 		this.oneSubscribers = [];
+// 		return this;
+// 	},
+
+
+
 kff.Events = kff.createClass(
 /** @lends kff.Events.prototype */
 {
@@ -848,6 +1086,8 @@ kff.Events = kff.createClass(
 	{
 		this.subscribers = {};
 		this.oneSubscribers = {};
+		this.allSubscribers = [];
+		this.oneAllSubscribers = [];
 	},
 
 	/**
@@ -858,7 +1098,11 @@ kff.Events = kff.createClass(
 	 */
 	on: function(eventType, fn)
 	{
-		if(typeof eventType === 'string')
+		if(arguments.length === 1)
+		{
+			return this.onAll(eventType);
+		}
+		else if(typeof eventType === 'string')
 		{
 			if(!this.subscribers[eventType]) this.subscribers[eventType] = [];
 			if(kff.arrayIndexOf(this.subscribers[eventType], fn) === -1)	this.subscribers[eventType].push(fn);
@@ -874,6 +1118,16 @@ kff.Events = kff.createClass(
 				}
 			}
 		}
+	},
+
+	/**
+	 * Binds event handler.
+	 *
+	 * @param {function} fn Event handler
+	 */
+	onAll: function(fn)
+	{
+		if(kff.arrayIndexOf(this.allSubscribers, fn) === -1) this.allSubscribers.push(fn);
 	},
 
 	/**
@@ -898,6 +1152,10 @@ kff.Events = kff.createClass(
 	off: function(eventType, fn)
 	{
 		var i, l;
+		if(arguments.length === 1)
+		{
+			return this.offAll(eventType);
+		}
 		if(typeof eventType === 'string')
 		{
 			if(this.subscribers[eventType] instanceof Array)
@@ -916,6 +1174,17 @@ kff.Events = kff.createClass(
 	},
 
 	/**
+	 * Unbinds event handler.
+	 *
+	 * @param {function} fn Event handler
+	 */
+	offAll: function(fn)
+	{
+		var i = kff.arrayIndexOf(this.allSubscribers, fn);
+		if(i !== -1) this.allSubscribers.splice(i, 1);
+	},
+
+	/**
 	 * Triggers an event.
 	 *
 	 * @param {string|Array} eventType Event name(s)
@@ -924,6 +1193,7 @@ kff.Events = kff.createClass(
 	trigger: function(eventType, eventData)
 	{
 		var i, l;
+
 		if(typeof eventType === 'string')
 		{
 			if(this.subscribers[eventType] instanceof Array)
@@ -987,1171 +1257,11 @@ kff.EventsMixin =
 };
 
 
-kff.Collection = kff.createClass(
-{
-	mixins: kff.EventsMixin
-},
-/** @lends kff.Collection.prototype	*/
-{
-	/**
-	 * Class representing a collection of models.
-
-	 * @constructs
-	 * @param {Object} options Options object
-	 * @param {function} options.itemFactory Factory function for creating new collection items (optional)
-	 * @param {function} options.itemType Type (class or constructor function) of collection items
-	 */
-	constructor: function(options)
-	{
-		this.options = options = options || {};
-		this.itemFactory = options.itemFactory || null;
-		this.itemType = options.itemType || kff.Model;
-		this.serializeAttrs = options.serializeAttrs || null;
-		this.onEachEvents = [];
-		this.array = [];
-	},
-
-	/**
-	 * Creates a new item using itemType or itemFactory if provided
-	 *
-	 * @returns {mixed} Created item
-	 */
-	createItem: function()
-	{
-		var item;
-		if(this.itemFactory) item = this.itemFactory();
-		else item = new this.itemType();
-		return item;
-	},
-
-	/**
-	 * Appends the item at the end of the collection
-	 *
-	 * Triggers a change event with folloving event object:
-	 *
-	 *  { type: 'append', item: item }
-	 *
-	 * @param {mixed} item Item to be appended
-	 * @param {Boolean} silent If true, do not trigger event
-	 */
-	append: function(item, silent)
-	{
-		this.array.push(item);
-		this.bindOnOne(item);
-		if(!silent) this.trigger('change', { type: 'append', item: item });
-	},
-
-	/**
-	 * Concatenates collection with other collections, arrays or objects
-	 *
-	 * Method accepts variable length arguments, works like Array.concat
-	 *
-	 * @return {kff.Collection} A new collection
-	 */
-	concat: function()
-	{
-		var collection = new kff.Collection(this.options);
-		var args = [];
-		for(var i = 0, l = arguments.length; i < l; i++)
-		{
-			if(arguments[i] instanceof kff.Collection) args.push(arguments[i].array);
-			else args.push(arguments[i]);
-		}
-		collection.array = Array.prototype.concat.apply(this.array, args);
-
-		return collection;
-	},
-
-	/**
-	 * Joins items of collection using toString method and separator
-	 *
-	 * Works like Array.join
-	 *
-	 * @return {String} Joined string
-	 */
-	join: function(separator)
-	{
-		return this.array.join(separator);
-	},
-
-	/**
-	 * Creates a new collection with the results of calling a provided function on every element in this collection
-	 *
-	 * Works like Array.concat
-	 *
-	 * @param  {Function} callback Function that produces an element of the new collection, taking three arguments:
-	 *                             currentValue: the current item being processed
-	 *                             index: the index of the current value
-	 *                             collection: the collection map was called upon
-	 * @param  {mixed}	thisArg    Value to use as this when executing callback
-	 * @return {kff.Collection}    Mapped collection
-	 */
-	map: function(callback, thisArg)
-	{
-		thisArg = thisArg || undefined;
-		var mappedArray;
-		var array = this.array;
-
-		if(typeof callback !== "function") {
-			throw new TypeError(callback + " is not a function");
-		}
-
-		mappedArray = new Array(array.length);
-
-		for(var i = 0, l = array.length; i < l; i++)
-		{
-			mappedArray[i] = callback.call(thisArg, array[i], i, this);
-		}
-
-		var mappedCollection = new kff.Collection(this.options);
-		mappedCollection.array = mappedArray;
-
-		return mappedCollection;
-	},
-
-	/**
-	 * The reduce() method applies a function against an accumulator and each value of the collection
-	 * (from left-to-right) has to reduce it to a single value.
-	 *
-	 * Works like Array.reduce
-	 *
-	 * @param  {Function} callback Function to execute on each value in the collection, taking four arguments:
-	 *                             previousValue: The value previously returned in the last invocation of the callback, or initialValue, if supplied.
-	 *                             currentValue: the current item being processed
-	 *                             index: the index of the current value
-	 *                             collection: the collection reduce was called upon
-	 * @param  {mixed}	initialValue  Object to use as the first argument to the first call of the callback.
-	 * @return {mixed}  Reduced value
-	 */
-	reduce: function(callback, initialValue)
-	{
-		var array = this.array;
-		var l = array.length, value, i = 0;
-
-		if(typeof callback !== 'function')
-		{
-			throw new TypeError( callback + ' is not a function' );
-		}
-
-		if(arguments.length >= 2)
-		{
-			value = arguments[1];
-		}
-		else
-		{
-			if(l === 0) throw new TypeError('Reduce of empty collection with no initial value');
-		  	value = array[i++];
-		}
-
-		for(; i < l; i++)
-		{
-			value = callback(value, array[i], i, this);
-		}
-		return value;
-	},
-
-	/**
-	 * The reduceRight() method applies a function against an accumulator and each value of the collection
-	 * (from right-to-left) has to reduce it to a single value.
-	 *
-	 * Works like Array.reduce
-	 *
-	 * @param  {Function} callback Function to execute on each value in the collection, taking four arguments:
-	 *                             previousValue: The value previously returned in the last invocation of the callback, or initialValue, if supplied.
-	 *                             currentValue: the current item being processed
-	 *                             index: the index of the current value
-	 *                             collection: the collection reduce was called upon
-	 * @param  {mixed}	initialValue  Object to use as the first argument to the first call of the callback.
-	 * @return {mixed}  Reduced value
-	 */
-	reduceRight: function(callback, initialValue)
-	{
-		var array = this.array;
-		var l = array.length, value, i = l - 1;
-
-		if(typeof callback !== 'function')
-		{
-			throw new TypeError( callback + ' is not a function' );
-		}
-
-		if(arguments.length >= 2)
-		{
-			value = arguments[1];
-		}
-		else
-		{
-			if(l === 0) throw new TypeError('Reduce of empty collection with no initial value');
-		  	value = array[i--];
-		}
-
-		for(; i >= 0; i--)
-		{
-			value = callback(value, array[i], i, this);
-		}
-		return value;
-	},
-
-	/**
-	 * Inserts an item at specified index
-	 *
-	 * Triggers a change event with folloving event object:
-	 *
-	 * { type: 'insert', item: item, index: index }
-	 *
-	 * @param {mixed} item Item to be inserted
-	 * @param {Boolean} silent If true, do not trigger event
-	 */
-	insert: function(item, index, silent)
-	{
-		this.array.splice(index, 0, item);
-		this.bindOnOne(item);
-		if(!silent) this.trigger('change', { type: 'insert', item: item, index: index });
-	},
-
-	/**
-	 * Sets an item at given position
-	 *
-	 * Triggers a change event with folloving event object:
-	 *
-	 * { type: 'set', item: item, index: index }
-	 *
-	 * @param {number} index Index of item
-	 * @param {mixed} item Item to set
-	 */
-	set: function(index, item, silent)
-	{
-		var replacedItem = this.get(index);
-		if(replacedItem) this.unbindOnOne(replacedItem);
-		if(this.array[index] !== undefined)	this.array[index] = item;
-		else throw new RangeError('Bad index in kff.List.set');
-		this.bindOnOne(item);
-		if(!silent) this.trigger('change', { type: 'set', item: item, index: index });
-	},
-
-	/**
-	 * Removes the item from the collection
-	 *
-	 * Triggers a change event with folloving event object:
-	 *
-	 * { type: 'remove', item: item }
-	 *
-	 * @param {mixed} item Reference to the item to be removed
-	 * @param {Boolean} silent If true, do not trigger event
-	 * @returns {mixed} Removed item or false if not found
-	 *
-	 */
-	remove: function(item, silent)
-	{
-		var i, a = this.array, currentItem, removed;
-		if(typeof item === 'function')
-		{
-			removed = [];
-			for(i = a.length - 1; i >= 0; i--)
-			{
-				currentItem = a[i];
-				if(item(currentItem) === true)
-				{
-					this.array.splice(i, 1);
-					removed.push({ item: currentItem, index: i });
-					this.unbindOnOne(currentItem);
-				}
-			}
-			if(removed.length === 0) return false;
-			else
-			{
-				if(!silent) this.trigger('change', { type: 'remove', items: removed });
-				return removed;
-			}
-		}
-		else
-		{
-			i = kff.arrayIndexOf(a, item);
-			if(i === -1) return false;
-			a.splice(i, 1);
-			this.unbindOnOne(item);
-			if(!silent) this.trigger('change', { type: 'remove', item: item, index: i });
-			return i;
-		}
-	},
-
-	/**
-	 * Creates a new collection with items that pass filter function test
-	 * @param {function} fn Test function that accepts one argument (item).
-	 */
-	filter: function(fn)
-	{
-		var filteredColllection = this.clone();
-		filteredColllection.remove(function(item){
-			return !fn.call(null, item);
-		});
-		return filteredColllection;
-	},
-
-	/**
-	 * Returns a shallow copy of a portion of an collection into a new collection
-	 *
-	 * Works like Array.slice
-	 */
-	slice: function()
-	{
-		var collection = new kff.Collection(this.options);
-		collection.array = Array.prototype.slice.apply(this.array, arguments);
-		for(var i = 0, l = collection.array.length; i < l; i++)
-		{
-			this.unbindOnOne(collection.array[i]);
-		}
-		return collection;
-	},
-
-	/**
-	 * Works like Array.push
-	 */
-	push: function()
-	{
-		var i = this.array.length;
-		var l = arguments.length;
-
-		if(l > 0)
-		{
-			Array.prototype.push.apply(this.array, arguments);
-			var event = { type: 'push', items: [], fromIndex: i };
-
-			for(; l > 0 ; i++, l--)
-			{
-				event.items.push(this.array[i]);
-				this.bindOnOne(this.array[i]);
-			}
-			this.trigger('change', event);
-		}
-		return this.array.length;
-	},
-
-	/**
-	 * Removes the last element from a collection and returns that element.
-	 * Works like Array.pop
-	 */
-	pop: function()
-	{
-		var item = this.array.pop();
-		if(item) this.trigger('change', { type: 'pop', item: item});
-		this.unbindOnOne(item);
-		return item;
-	},
-
-	/**
-	 * Removes the first element from a collection and returns that element.
-	 * Works like Array.shift
-	 */
-	shift: function()
-	{
-		var item = this.array.shift();
-		if(item) this.trigger('change', { type: 'shift', item: item});
-		this.unbindOnOne(item);
-		return item;
-	},
-
-	/**
-	 * Adds one or more elements to the beginning of a collection and returns the new length of the collection.
-	 * Works like Array.unshift
-	 */
-	unshift: function()
-	{
-		var l = arguments.length;
-
-		if(l > 0)
-		{
-			Array.prototype.unshift.apply(this.array, arguments);
-			var event = { type: 'unshift', items: []};
-
-			for(var i = 0; i < l ; i++)
-			{
-				event.items.push(this.array[i]);
-				this.bindOnOne(this.array[i]);
-			}
-			this.trigger('change', event);
-		}
-		return this.array.length;
-	},
-
-	/**
-	 * Returns an item at given position
-	 *
-	 * @param {number} index Index of item
-	 * @returns {mixed} Item at given position (or undefined if not found)
-	 */
-	get: function(index)
-	{
-		return this.array[index];
-	},
-
-	/**
-	 * Returns the value of given attribute using deep lookup (object.attribute.some.value)
-	 *
-	 * @param {string} attrPath Attribute path
-	 * @returns {mixed} Attribute value
-	 * @example
-	 * obj.mget('one.two.three');
-	 * // equals to:
-	 * obj.get('one').get('two').get('three');
-	 */
-	mget: function(attrPath)
-	{
-		var attr;
-		if(typeof attrPath === 'string') attrPath = attrPath.split('.');
-		attr = this.get(attrPath.shift());
-		if(attrPath.length > 0)
-		{
-			if(attr instanceof kff.Model || attr instanceof kff.Collection) return attr.mget(attrPath);
-			else return kff.evalObjectPath(attrPath, attr);
-		}
-		else return attr;
-	},
-
-	/**
-	 * Creates a JSON representation of collection (= array object).
-	 *
-	 * If item of collection is object, tries to call toJson on it recursively.
-	 * This function returns a plain object, not a stringified JSON.
-	 *
-	 * @returns {Array} Array representation of collection
-	 */
-	toJson: function()
-	{
-		var serializeAttrs = this.serializeAttrs, array = [];
-		this.each(function(item)
-		{
-			if(item && item.toJson) array.push(item.toJson(serializeAttrs));
-			else array.push(item);
-		});
-		return array;
-	},
-
-	/**
-	 * Reads collection from JSON representation (= from JavaScript array)
-	 *
-	 * Triggers a change event with folloving event object:
-	 *
-	 * { type: 'fromJson' }
-	 *
-	 * @param {Array} array Array to read from
-	 * @param {Boolean} silent If true, do not trigger event
-	 */
-	fromJson: function(array, silent)
-	{
-		var item;
-		this.empty(true);
-		for(var i = 0, l = array.length; i < l; i++)
-		{
-			item = this.createItem();
-			item.fromJson(array[i], silent);
-			this.append(item, true);
-		}
-		if(!silent) this.trigger('change', { type: 'fromJson' });
-	},
-
-	/**
-	 * Finds an item with given attribute value
-	 *
-	 * @param {string} attr Attribute name
-	 * @param {mixed} value Attribute value
-	 * @returns {mixed} First found item or null
-	 */
-	findByAttr: function(attr, value)
-	{
-		var ret = null;
-		this.each(function(val)
-		{
-			if(val && val.get(attr) === value)
-			{
-				ret = val;
-				return false;
-			}
-		});
-		return ret;
-	},
-
-	/**
-	 * Removes all items from collection
-	 *
-	 * Triggers a change event with folloving event object:
-	 *
-	 * { type: 'empty' }
-	 *
-	 * @param {Boolean} silent If true, do not trigger event
-	 */
-	empty: function(silent)
-	{
-		this.unbindEach();
-		this.array = [];
-		if(!silent) this.trigger('change', { type: 'empty' });
-	},
-
-	/**
-	 * Sorts collection using a compare function. The compare function follows the same specification
-	 * as the standard Array.sort function
-	 *
-	 * Triggers a change event with folloving event object:
-	 *
-	 * { type: 'sort' }
-	 *
-	 * @param {function} compareFunction Compare function
-	 * @param {Boolean} silent If true, do not trigger event
-	 */
-	sort: function(compareFunction, silent)
-	{
-		this.array.sort(compareFunction);
-		if(!silent) this.trigger('change', { type: 'sort' });
-	},
-
-	// sortBy: function(valueFunction, silent)
-	// {
-	// 	var array = this.array;
-	// 	for(var i = 0, l = array.length; i < l; i++)
-	// 	{
-	// 		array[i] = [array[i], valueFunction(array[i])];
-	// 	}
-	// 	this.array.sort(function(a, b){
-	// 		return a[1] - b[1];
-	// 	});
-	// 	// this.array.sort(function(a, b){
-	// 	// 	return valueFunction(a) - valueFunction(b);
-	// 	// });
-	// 	for(var i = 0, l = array.length; i < l; i++)
-	// 	{
-	// 		array[i] = array[i][0];
-	// 	}
-	// 	if(!silent) this.trigger('change', { type: 'sort' });
-	// },
-
-
-	/**
-	 * Creates a clone (shallow copy) of the collection.
-	 *
-	 * @returns {kff.Collection} Cloned collection
-	 */
-	clone: function()
-	{
-		var clon = new kff.Collection(this.options);
-		this.each(function(item){
-			clon.append(item);
-		});
-		clon.onEachEvents = [].concat(this.onEachEvents);
-		clon.rebindEach();
-		return clon;
-	},
-
-	/**
-	 * Randomizes items in the collection.
-	 *
-	 * Triggers a change event with folloving event object:
-	 *
-	 * { type: 'shuffle' }
-	 *
-	 * @param {Boolean} silent If true, do not trigger event
-	 */
-	shuffle: function(silent)
-	{
-		var arr = this.array,
-			len = arr.length,
-			i = len,
-			p, t;
-
-		while(i--)
-		{
-			p = parseInt(Math.random()*len, 10);
-			t = arr[i];
-			arr[i] = arr[p];
-			arr[p] = t;
-		}
-
-		if(!silent) this.trigger('change', { type: 'shuffle' });
-	},
-
-	/**
-	 * Splices the collection. Works exactly like the Array.splice method.
-	 */
-	splice: function()
-	{
-		this.unbindEach();
-		Array.prototype.splice.apply(this.array, arguments);
-		this.rebindEach();
-		this.trigger('change', { type: 'splice' });
-	},
-
-	/**
-	 * Returns an index of given item
-	 *
-	 * @param {mixed} item Value to be found
-	 * @returns {number} index of the item or -1 if not found
-	 */
-	indexOf: function(item)
-	{
-		return kff.arrayIndexOf(this.array, item);
-	},
-
-	some: function(item)
-	{
-		if (!Array.prototype.some)
-		{
-			Array.prototype.some = function(fun /*, thisArg*/)
-			{
-				'use strict';
-
-				if (this == null) {
-					throw new TypeError('Array.prototype.some called on null or undefined');
-				}
-
-				if (typeof fun !== 'function') {
-					throw new TypeError();
-				}
-
-				var t = Object(this);
-				var len = t.length >>> 0;
-
-				var thisArg = arguments.length >= 2 ? arguments[1] : void 0;
-				for (var i = 0; i < len; i++) {
-					if (i in t && fun.call(thisArg, t[i], i, t)) {
-						return true;
-					}
-				}
-
-				return false;
-			};
-		}
-		return this.array.some(item);
-	},
-
-	/**
-	 * Returns number of items in the list.
-	 *
-	 * @return {number} Number of items (length of the list)
-	 */
-	count: function()
-	{
-		return this.array.length;
-	},
-
-	/**
-	 * Iterates over each item in the list
-	 * @param {function} fn A callback function to be called on each item. Takes two arguments - the iterated item and its index
-	 */
-	each: function(fn)
-	{
-		var a = this.array, l = a.length, i = 0;
-		for(; i < l; i++)
-		{
-			if(fn.call(null, a[i], i) === false) break;
-		}
-	},
-
-	/**
-	 * Binds an event handler to each item in the collection.
-	 * This bindings are persistent - when new items are added to the
-	 * collection, event handlers are automatically bound to them. Handlers for
-	 * removed items are automatically removed as well.
-	 *
-	 * @param  {String}   eventType Event type
-	 * @param  {Function} fn        Event handler
-	 */
-	onEach: function(eventType, fn)
-	{
-		for(var i = 0, l = this.onEachEvents.length; i < l; i++)
-		{
-			if(this.onEachEvents[i].eventType === eventType && this.onEachEvents[i].fn === fn)
-			{
-				return;
-			}
-		}
-
-		this.onEachEvents.push({ eventType: eventType, fn: fn });
-		this.each(function(item, i){
-			item.on(eventType, fn);
-		});
-	},
-
-	/**
-	 * Unbinds event handler previously bound by onEach method.
-	 *
-	 * @param  {String}   eventType Event type
-	 * @param  {Function} fn        Event handler
-	 */
-	offEach: function(eventType, fn)
-	{
-		for(var i = 0, l = this.onEachEvents.length; i < l; i++)
-		{
-			if(this.onEachEvents[i].eventType === eventType && this.onEachEvents[i].fn === fn)
-			{
-				this.onEachEvents.splice(i, 1);
-				l--;
-			}
-		}
-		this.each(function(item, i){
-			item.off(eventType, fn);
-		});
-	},
-
-	/**
-	 * Binds 'onEach' event handlers to a newly added collection item.
-	 *
-	 * @private
-	 * @param  {kff.Model} item A new collection item (model)
-	 */
-	bindOnOne: function(item)
-	{
-		for(var i = 0, l = this.onEachEvents.length; i < l; i++)
-		{
-			item.on(this.onEachEvents[i].eventType, this.onEachEvents[i].fn);
-		}
-	},
-
-	/**
-	 * Unbinds 'onEach' event handlers from removed collection item.
-	 *
-	 * @private
-	 * @param  {kff.Model} item Removed collection item (model)
-	 */
-	unbindOnOne: function(item)
-	{
-		for(var i = 0, l = this.onEachEvents.length; i < l; i++)
-		{
-			item.off(this.onEachEvents[i].eventType, this.onEachEvents[i].fn);
-		}
-	},
-
-	/**
-	 * Rebinds all 'onEach' event handlers for each collection item.
-	 *
-	 * @private
-	 */
-	rebindEach: function()
-	{
-		var that = this;
-		this.each(function(item, i)
-		{
-			for(var j = 0, l = that.onEachEvents.length; j < l; j++)
-			{
-				item.on(that.onEachEvents[j].eventType, that.onEachEvents[j].fn);
-			}
-		});
-	},
-
-	/**
-	 * Unbinds all 'onEach' event handlers for each collection item.
-	 *
-	 * @private
-	 */
-	unbindEach: function()
-	{
-		var that = this;
-		this.each(function(item, i)
-		{
-			for(var j = 0, l = that.onEachEvents.length; j < l; j++)
-			{
-				item.off(that.onEachEvents[j].eventType, that.onEachEvents[j].fn);
-			}
-		});
-	}
-
-});
-
-kff.Collection.prototype.findByIndex = kff.Collection.prototype.get;
-
-
-kff.Model = kff.createClass(
-{
-	mixins: kff.EventsMixin
-},
-/** @lends kff.Model.prototype */
-{
-	/**
-	 * Base class for models
-	 * @constructs
-	 */
-	constructor: function(attrs)
-	{
-		this.initEvents();
-
-		/**
-		 * Attributes of model
-		 * @private
-		 */
-		this.attrs = this.attrs || {};
-
-		if(attrs) this.set(attrs);
-	},
-
-	/**
-	 * Checks if the model has given attribute
-	 *
-	 * @public
-	 * @param {string} attr Attribute name
-	 * @returns {boolean} True if found, false otherwise
-	 */
-	has: function(attr)
-	{
-		return attr in this.attrs;
-	},
-
-	/**
-	 * Returns the value of given attribute
-	 *
-	 * @param {string} attr Attribute name
-	 * @returns {mixed} Attribute value
-	 */
-	get: function(attr)
-	{
-		return this.attrs[attr];
-	},
-
-	/**
-	 * Returns the value of given attribute using deep lookup (object.attribute.some.value)
-
-	 * @param {string} attrPath Attribute path
-	 * @returns {mixed} Attribute value
-	 * @example
-	 *     obj.mget('one.two.three');
-	 *     // equals to:
-	 *     obj.get('one').get('two').get('three');
-	 */
-	mget: function(attrPath)
-	{
-		var attr;
-		if(typeof attrPath === 'string') attrPath = attrPath.split('.');
-		attr = this.get(attrPath.shift());
-		if(attrPath.length > 0)
-		{
-			if(attr instanceof kff.Model || attr instanceof kff.Collection) return attr.mget(attrPath);
-			else return kff.evalObjectPath(attrPath, attr);
-		}
-		else return attr;
-	},
-
-	/**
-	 * Sets the value(s) of given attribute(s). Triggers a change event.
-	 *
-	 * @param {string|Object} attr Attribute name
-	 * @param {mixed} value Attribute value
-	 * @param {Boolean} silent If true, do not trigger event
-	 */
-	set: function(attr, value, silent)
-	{
-		var changed = {};
-
-		if(typeof attr === 'string')
-		{
-			if(this.get(attr) === value) return;
-			changed[attr] = value;
-			this.attrs[attr] = value;
-		}
-		else if(attr !== null && typeof attr === 'object')
-		{
-			silent = value;
-			changed = attr;
-			for(var key in changed) this.attrs[key] = changed[key];
-		}
-
-		if(!silent)
-		{
-			for(var changedAttr in changed)
-			{
-				this.trigger('change:' + changedAttr, { model: this, changed: changed, changedAttributes: changed });
-			}
-			this.trigger('change', { model: this, changed: changed, changedAttributes: changed });
-		}
-	},
-
-	/**
-	 * Unsets (deletes) the attribute(s). Triggers a change event.
-	 *
-	 * @param {string|Array} attr Attribute name or array of attribute names
-	 * @param {Boolean} silent If true, do not trigger event
-	 */
-	unset: function(attr,  silent)
-	{
-		var changed = {};
-
-		if(typeof attr === 'string')
-		{
-			if(attr in this.attrs) delete this.attrs[attr];
-			changed[attr] = undefined;
-		}
-		else if(attr !== null && attr instanceof Array)
-		{
-			for(var i = 0, l = attr.length; i < l; i++)
-			{
-				if(attr[i] in this.attrs)
-				{
-					delete this.attrs[attr[i]];
-					changed[attr[i]] = undefined;
-				}
-			}
-		}
-
-		if(!silent)
-		{
-			for(var changedAttr in changed)
-			{
-				this.trigger('change:' + changedAttr, { model: this, changed: changed, changedAttributes: changed });
-			}
-			this.trigger('change', { model: this, changed: changed, changedAttributes: changed });
-		}
-	},
-
-	unsetAll: function(silent)
-	{
-		var unset = [];
-
-		for(var attr in this.attrs)
-		{
-			unset.push(attr);
-		}
-
-		this.unset(unset, silent);
-	},
-
-	/**
-	 * Exports a JSON representation of model attributes. If an attribute is type of Object, tries to call a toJson
-	 * method recursively.	This function returns a plain javascript object, not the stringified JSON.
-	 *
-	 * @param {Array.<string>} serializeAttrs Array of attribute names to be exported or all if omitted.
-	 * @returns {Object} Plain JavaScript object representation of object's attributes
-	 */
-	toJson: function(serializeAttrs)
-	{
-		var obj = {};
-		for(var key in this.attrs)
-		{
-			if((!serializeAttrs || kff.arrayIndexOf(serializeAttrs, key) !== -1) && this.attrs.hasOwnProperty(key))
-			{
-				if(this.attrs[key] && typeof this.attrs[key] === 'object' && 'toJson' in this.attrs[key]) obj[key] = this.attrs[key].toJson();
-				else obj[key] = this.attrs[key];
-			}
-		}
-		return obj;
-	},
-
-	/**
-	 * Imports model's attributes from JSON (plain JavaScript object).
-	 *
-	 * If the attribute is type of Object, tries to read appropriate property using its fromJson method.
-	 * This function returns plain object, not stringified JSON.
-	 *
-	 * @param {Object} obj Plain JS object to read attributes from
-	 * @param {Boolean} silent If true, do not trigger event
-	 */
-	fromJson: function(obj, silent)
-	{
-		if(!obj) return;
-		var attrs = {};
-		for(var key in this.attrs)
-		{
-			if(this.attrs.hasOwnProperty(key) && obj.hasOwnProperty(key))
-			{
-				if(this.attrs[key] && typeof this.attrs[key] === 'object' && 'fromJson' in this.attrs[key]) this.attrs[key].fromJson(obj[key]);
-				else this.attrs[key] = obj[key];
-			}
-		}
-		this.set(this.attrs, silent);
-	},
-
-	/**
-	 * Creates a new computed attribute.
-	 *
-	 * Computed attribute is like a normal attribute except its value is automatically recomputed each time the
-	 * depending attributes change.
-	 *
-	 * @param  {String}   attr  A name of computed property
-	 * @param  {Array}   attrs Array of attributes the computed attribute is depending on
-	 * @param  {Function|String} fn    Function to be called when any of depending attributes changes. Arguments of this functin are depending attributes, returns a computed value.
-	 */
-	createComputed: function(attr, attrs, fn)
-	{
-		var computed, i, l;
-		if(!this._computed) this._computed = [];
-
-		computed = {
-			args: [attr, attrs, fn],
-			boundFn: this.f(function()
-			{
-				var vals = [];
-				for(i = 0, l = attrs.length; i < l; i++)
-				{
-					vals[i] = this.get(attrs[i]);
-				}
-				this.set(attr, this.f(fn).apply(this, vals));
-			})
-		};
-
-		this._computed.push(computed);
-
-		for(i = 0, l = attrs.length; i < l; i++)
-		{
-			this.on('change:' + attrs[i], computed.boundFn);
-		}
-
-		computed.boundFn();
-	},
-
-	/**
-	 * Iterates over model's attributes
-	 * @param  {Function} fn Function to be called for each attribute. Arguments are (key, value).
-	 */
-	each: function(fn)
-	{
-		var key, attrs = this.attrs;
-		for(key in attrs)
-		{
-			fn(key, attrs[key]);
-		}
-	}
-
-});
-
-(function()
-{
-	var createGetter = function(attr)
-	{
-		return function(value)
-		{
-			if(arguments.length === 0)	return this.get(attr);
-			else return this.set(attr, value);
-		};
-	};
-
-	kff.createModelClass = function(meta, properties)
-	{
-		if(arguments.length === 1)
-		{
-			properties = meta;
-			meta = {};
-		}
-
-		if(!('extend' in meta)) meta.extend = kff.Model;
-
-		var modelClass = kff.createClass(meta, properties);
-
-		if('service' in modelClass && 'args' in modelClass.service)
-		{
-			var attrs = modelClass.service.args['0'];
-			if(typeof attrs === 'object' && attrs !== null)
-			{
-				for(var attr in attrs)
-				{
-					if(!(attr in modelClass.prototype)) modelClass.prototype[attr] = createGetter(attr);
-				}
-			}
-		}
-		return modelClass;
-	};
-
-})();
-
-kff.ModelPathWatcher = kff.createClass(
-{
-	mixins: kff.EventsMixin
-},
-{
-	constructor: function(model, attrPath)
-	{
-		if(arguments.length === 1)
-		{
-			attrPath = model;
-			model = null;
-		}
-		if(typeof attrPath === 'string') attrPath = attrPath.split('.');
-		if(model === null)
-		{
-			model = window;
-		}
-		this.attr = attrPath.pop();
-		this.rootModel = model;
-		this.model = null;
-		this.modelPathArray = attrPath;
-		this.dynamicBindings = [];
-	},
-
-	init: function()
-	{
-		var model = this.rootModel,
-			attr;
-
-		this.dynamicBindings = [];
-
-		for(var i = 0, l = this.modelPathArray.length; i < l; i++)
-		{
-			attr = this.modelPathArray[i];
-			if(model instanceof kff.Model)
-			{
-				model.on('change:' + attr, this.f('rebindTimed'));
-				this.dynamicBindings.push({ model: model, attr: attr });
-				model = model.get(attr);
-			}
-			else if(model !== null && typeof model === 'object' && (attr in model)) model = model.attr;
-			else model = null;
-		}
-		if(model instanceof kff.Model) this.model = model;
-		else this.model = null;
-
-		if(this.model instanceof kff.Model)
-		{
-			this.bindModel();
-		}
-	},
-
-	destroy: function()
-	{
-		if(this.model instanceof kff.Model)
-		{
-			this.unbindModel();
-		}
-
-		if(this.dynamicBindings)
-		{
-			for(var i = 0, l = this.dynamicBindings.length; i < l; i++)
-			{
-				this.dynamicBindings[i].model.off('change:' + this.dynamicBindings[i].attr, this.f('rebindTimed'));
-			}
-			this.dynamicBindings = null;
-		}
-	},
-
-	rebindTimed: function(event)
-	{
-		kff.setZeroTimeout(this.f('rebind'));
-	},
-
-	rebind: function(event)
-	{
-		this.destroy();
-		this.init();
-		this.modelChange();
-	},
-
-	bindModel: function()
-	{
-		this.model.on('change' + (this.attr === null ? '' : ':' + this.attr), this.f('modelChange'));
-	},
-
-	unbindModel: function()
-	{
-		this.model.off('change' + (this.attr === null ? '' : ':' + this.attr), this.f('modelChange'));
-	},
-
-	modelChange: function(event)
-	{
-		this.trigger('change' + (this.attr === null ? '' : ':' + this.attr), event);
-	}
-
-});
-
-
 kff.ServiceContainer = kff.createClass(
 {
 	statics:
 	{
 		CONFIG_CONSTRUCTOR: 'construct',
-		singleParamRegex: /^%[^%]+%$/g,
-		multipleParamsRegex: /%([^%]+)%/g,
 		serviceNameRegex: /^[^\s#]*/
 	}
 },
@@ -2164,7 +1274,7 @@ kff.ServiceContainer = kff.createClass(
 	 */
 	constructor: function(config, loader)
 	{
-		this.config = config || { parameters: {}, services: {} };
+		this.config = config || { parameters: {}, services: {}, modules: null };
 		this.services = {};
 		this.cachedParams = {};
 		if(loader) this.loadService = loader;
@@ -2343,8 +1453,6 @@ kff.ServiceContainer = kff.createClass(
 	 * String parameters refers to parameters defined in config.parameters section
 	 * If parameter is a string, it could have these special chars:
 	 * '@serviceName' - resolves to instance of service
-	 * '%parameterName%' - resolves to reference to parameter parameterName
-	 * '%someParameter% some %otherParameter% some more string' - resolves to string with 'inner parameters' resolved to strings as well
 	 *
 	 * @param {string|Array|Object} params Parameters to be resolved
 	 * @returns {mixed} Resolved parameter value
@@ -2369,24 +1477,9 @@ kff.ServiceContainer = kff.createClass(
 				if(params.length === 0) ret = this;
 				else ret = this.getService(params);
 			}
-			else if(this.cachedParams[params] !== undefined) ret = this.cachedParams[params];
 			else
 			{
-				if(params.search(kff.ServiceContainer.singleParamRegex) !== -1)
-				{
-					ret = config.parameters[params.slice(1, -1)];
-				}
-				else
-				{
-					ret = params.replace('%%', 'escpersign');
-					ret = ret.replace(kff.ServiceContainer.multipleParamsRegex, function(match, p1)
-					{
-						if(config.parameters[p1]) return config.parameters[p1];
-						else return '';
-					});
-					ret = ret.replace('escpersign', '%');
-				}
-				this.cachedParams[params] = ret;
+				ret = params;
 			}
 		}
 		else if(params instanceof Array)
@@ -2432,30 +1525,13 @@ kff.ServiceContainer = kff.createClass(
 	},
 
 	/**
-	 * Registers a new parameters configuration
-	 *
-	 * @param  {Object} parameters Parameters configuration object
-	 * @param  {Boolean} overwrite If parameter already exists, overwrite it with new config
-	 */
-	registerParameters: function(parameters, overwrite)
-	{
-		var parameter;
-		for(parameter in parameters)
-		{
-			if(!this.config.parameters.hasOwnProperty(parameter) || overwrite)
-			{
-				this.config.parameters[parameter] = parameters[parameter];
-			}
-		}
-	},
-
-	/**
 	 * Returns a service (constructor, function or another type of service)
 	 * @param  {string}   serviceName Name of service
 	 * @return {mixed}                Service constructor or factory or any other type of service
 	 */
 	loadService: function(serviceName)
 	{
+		var module;
 		if(typeof serviceName === 'string')
 		{
 			var match = serviceName.match(kff.ServiceContainer.serviceNameRegex);
@@ -2464,6 +1540,17 @@ kff.ServiceContainer = kff.createClass(
 				serviceName = match[0];
 			}
 		}
+
+		if(this.config.modules)
+		{
+			module = kff.evalObjectPath(serviceName, this.config.modules);
+			if(module) return module;
+		}
+
+		module = kff.require(serviceName);
+
+		if(module) return module;
+
 		return kff.evalObjectPath(serviceName);
 	},
 
@@ -2487,21 +1574,26 @@ kff.ServiceContainer = kff.createClass(
 
 
 
+(function()
+{
+
+var bindingRegex = /(?:([.a-zA-Z0-9*-]+))(?:\(([@.a-zA-Z0-9*,\s-]+)*\))?((?::[a-zA-Z0-9]+(?:\((?:[^()]*)\))?)*)/g;
+
+var operatorsRegex = /:([a-zA-Z0-9]+)(?:\(([^()]*)\))?/g;
+
+var commaSeparateRegex = /\s*,\s*/;
+
+var modifierSeparateRegex = /([^{},\s]+)|({[a-zA-Z0-9,\[\]_\-\.\s@*]+})/g;
+
+var leadingPeriodRegex = /^\./;
+
+var trailingPeriodRegex = /\.$/;
+
+
 kff.View = kff.createClass(
 {
 	mixins: kff.EventsMixin,
 	statics: {
-		bindingRegex: /(?:([.a-zA-Z0-9*-]+))((?::[a-zA-Z0-9]+(?:\((?:[^()]*)\))?)*)/g,
-
-		operatorsRegex: /:([a-zA-Z0-9]+)(?:\(([^()]*)\))?/g,
-
-		commaSeparateRegex: /\s*,\s*/,
-
-		modifierSeparateRegex: /([^{},\s]+)|({[a-zA-Z0-9,\[\]_\-\.\s@*]+})/g,
-
-		leadingPeriodRegex: /^\./,
-
-		trailingPeriodRegex: /\.$/,
 
 		/**
 		 * Object hash that holds references to binder classes under short key names
@@ -2542,7 +1634,7 @@ kff.View = kff.createClass(
 	 * @constructs
 	 * @param {Object} options Options object
 	 * @param {DOM Element|jQuery} options.element A DOM element that will be a root element of the view
-	 * @param {Array} options.models Array of model instances to be used by the view
+	 * @param {Array} options.scope Array of model instances to be used by the view
 	 */
 	constructor: function(options)
 	{
@@ -2557,26 +1649,19 @@ kff.View = kff.createClass(
 		this.subviewsStruct = null;
 		this.explicitSubviewsStruct = null;
 		this.subviews = null;
-		this.eventTriggers = null;
 		this.viewFactory = null;
 		this.cachedRegions = null;
 		this.pendingRefresh = false;
+		this.subviewsScope = null;
 
 		this.initEvents();
 
-		if(options.models)
+		if(options.scope)
 		{
-			this.models = options.models;
-			options.models = null;
+			this.scope = options.scope;
+			options.scope = null;
 		}
-		else this.models = {};
-
-		if(options.helpers)
-		{
-			this.helpers = options.helpers;
-			options.helpers = null;
-		}
-		else this.helpers = {};
+		else this.scope = {};
 
 		if(options.parentView)
 		{
@@ -2588,12 +1673,6 @@ kff.View = kff.createClass(
 			this.domEvents = options.events.slice();
 		}
 		else this.domEvents = [];
-
-		if(options.modelEvents)
-		{
-			this.modelEvents = options.modelEvents.slice();
-		}
-		else this.modelEvents = [];
 
 		if(options.element)
 		{
@@ -2612,12 +1691,19 @@ kff.View = kff.createClass(
 		}
 		else this.dispatcher = null;
 
+		if(options.actions && this.dispatcher)
+		{
+			this.actions = options.actions;
+		}
+		else this.actions = null;
+
 		if(options.env)
 		{
 			this.env = options.env;
 		}
 
 		this.options = options;
+
 	},
 
 
@@ -2671,7 +1757,6 @@ kff.View = kff.createClass(
 			this.renderRegions(this.options.regions);
 			if(this.render !== kff.noop) this.render();
 			this.renderSubviews();
-			this.processEventTriggers();
 		}
 	},
 
@@ -2689,24 +1774,29 @@ kff.View = kff.createClass(
 		{
 			if(this.modelBindersMap) this.modelBindersMap.initBinders();
 
-			var ret;
-
-			if(this.run !== kff.noop) ret = this.run();
+			if(this.run !== kff.noop) this.run();
 			this.runSubviews();
 
 			this.delegateEvents();
-			this.delegateModelEvents();
-			if(this.dispatcher) this.dispatcher.on('refresh', this.f('requestRefreshAll'));
+
+			if(this.actions)
+			{
+				if(!this.dispatcher) this.dispatcher = new kff.Dispatcher();
+				this.dispatcher.registerActions(this.actions);
+			}
+
+			if(this.dispatcher)
+			{
+				this.dispatcher.on('refresh', this.f('refreshAll'));
+				this.dispatcher.on('refreshFromRoot', this.f('refreshFromRoot'));
+			}
 
 			if(typeof this.afterRender === 'function') this.afterRender();
 
 			this.$element[0].setAttribute(kff.DATA_RENDERED_ATTR, true);
 
 			this.refreshOwnBinders(true);
-
-			return ret;
 		}
-
 	},
 
 	requestRefreshAll: function()
@@ -2730,13 +1820,12 @@ kff.View = kff.createClass(
 		if(typeof this.refresh === 'function') this.refresh();
 		if(this.collectionBinder)
 		{
-			this.collectionBinder.collection = this.getModel(this.collectionBinder.collectionPathArray);
 			this.collectionBinder.refreshBoundViews();
 			this.collectionBinder.refreshAll();
 		}
 		else
 		{
-			this.rebindModels();
+			this.rebindCursors();
 			this.refreshOwnBinders();
 			if(this.subviews !== null)
 			{
@@ -2744,6 +1833,23 @@ kff.View = kff.createClass(
 			}
 		}
 		this.pendingRefresh = false;
+	},
+
+	/**
+	 * Refreshes all views from root
+	 */
+	refreshFromRoot: function()
+	{
+		var view = this;
+		while(view.parentView)
+		{
+			view = view.parentView;
+		}
+
+		if(view.dispatcher !== null)
+		{
+			view.dispatcher.trigger({ type: 'refresh' });
+		}
 	},
 
 	/**
@@ -2761,24 +1867,23 @@ kff.View = kff.createClass(
 		this.bindingIndex = null;
 		this.itemAlias = null;
 
-		var ret;
 		this.$element[0].removeAttribute(kff.DATA_RENDERED_ATTR);
 		this.undelegateEvents();
-		this.undelegateModelEvents();
 		this.destroySubviews();
-		if(this.dispatcher) this.dispatcher.off('refresh', this.f('requestRefreshAll'));
+		if(this.dispatcher)
+		{
+			this.dispatcher.off('refresh', this.f('refreshAll'));
+			this.dispatcher.off('refreshFromRoot', this.f('refreshFromRoot'));
+		}
 
-		if(this.destroy !== kff.noop) ret = this.destroy();
+		if(this.destroy !== kff.noop) this.destroy();
 		if(typeof this.afterDestroy === 'function') this.afterDestroy();
 
 		this.subviewsStruct = null;
 		this.explicitSubviewsStruct = null;
 		this.subviews = null;
-		this.eventTriggers = null;
 
 		this.clearRegions(this.options.regions);
-
-		return ret;
 	},
 
 	/**
@@ -2801,7 +1906,7 @@ kff.View = kff.createClass(
 			if(this.explicitSubviewsStruct !== null)
 			{
 				if(this.subviewsStruct === null) this.subviewsStruct = [];
-				subviewsStruct = this.subviewsStruct.concat(this.explicitSubviewsStruct);
+				subviewsStruct = kff.arrayConcat(this.subviewsStruct, this.explicitSubviewsStruct);
 			}
 			else if(this.subviewsStruct !== null) subviewsStruct = this.subviewsStruct.slice();
 
@@ -2834,7 +1939,6 @@ kff.View = kff.createClass(
 		}
 		else
 		{
-			this.delegateEventTriggers();
 			if(this.subviews)
 			{
 				for(var i = 0, l = this.subviews.length; i < l; i++)
@@ -2857,8 +1961,6 @@ kff.View = kff.createClass(
 		else
 		{
 			var subView, i, l;
-
-			this.undelegateEvents(this.eventTriggers);
 
 			// Destroy subviews
 			if(this.subviews !== null)
@@ -2897,26 +1999,18 @@ kff.View = kff.createClass(
 	 * @param {string} modelPath Key path of model in the form of "modelName.attribute.nextAttribute etc.".
 	 * @return {mixed} A model instance or attribute value or null if not found.
 	 */
-	getModel: function(modelPath)
+	getCursor: function(keyPath)
 	{
-		var modelName, model;
-		if(typeof modelPath === 'string') modelPath = modelPath.split('.');
+		if(typeof keyPath === 'string') keyPath = keyPath.split('.');
 
-		modelName = modelPath[0];
-		modelPath = modelPath.slice(1);
-		model = this.models[modelName];
+		var rootCursorName = keyPath[0];
+		var keyPath = keyPath.slice(1);
+		var rootCursor = this.scope[rootCursorName];
+		if(!(rootCursor instanceof kff.Cursor)) rootCursor = new kff.Cursor(rootCursor, keyPath);
 
-		if(modelPath.length > 0)
-		{
-			if(model)
-			{
-				if(typeof model.mget === 'function') return model.mget(modelPath);
-				else return kff.evalObjectPath(modelPath, model);
-			}
-			else return null;
-		}
-		else return model;
-		return null;
+		var cursor = rootCursor.refine(keyPath);
+
+		return cursor;
 	},
 
 	/**
@@ -2937,38 +2031,6 @@ kff.View = kff.createClass(
 			events = Array.prototype.slice.apply(arguments);
 		}
 		Array.prototype.push.apply(this.domEvents, events);
-	},
-
-	/**
-	 * Adds events config to the internal events array.
-	 *
-	 * @private
-	 * @param {Array} events Array of arrays of binding config
-	 */
-	addModelEvents: function(events)
-	{
-		if(!(events instanceof Array))
-		{
-			if(arguments.length === 3) this.modelEvents.push(Array.prototype.slice.apply(arguments));
-			return;
-		}
-		else if(!(events[0] instanceof Array))
-		{
-			events = Array.prototype.slice.apply(arguments);
-		}
-		Array.prototype.push.apply(this.modelEvents, events);
-	},
-
-	/**
-	 * Adds events config to the internal eventTriggers array.
-	 *
-	 * @private
-	 * @param {Array} events Array of arrays of binding config
-	 */
-	addEventTriggers: function(events)
-	{
-		if(!this.eventTriggers) this.eventTriggers = [];
-		Array.prototype.push.apply(this.eventTriggers, events);
 	},
 
 	/**
@@ -3049,123 +2111,6 @@ kff.View = kff.createClass(
 	},
 
 	/**
-	 * Delegates model events for this view, its binders and recursively for all subviews or boundviews
-	 */
-	delegateModelEventsAll: function()
-	{
-		if(this.collectionBinder)
-		{
-			this.collectionBinder.delegateModelEventsAll();
-		}
-		else
-		{
-			this.delegateModelEvents();
-			if(this.subviews !== null)
-			{
-				for(var i = 0, l = this.subviews.length; i < l; i++) this.subviews[i].delegateModelEventsAll();
-			}
-		}
-	},
-
-	/**
-	 * Undelegates model events for this view, its binders and recursively for all subviews or boundviews
-	 */
-	undelegateModelEventsAll: function()
-	{
-		if(this.collectionBinder)
-		{
-			this.collectionBinder.undelegateModelEventsAll();
-		}
-		else
-		{
-			this.undelegateModelEvents();
-			if(this.subviews !== null)
-			{
-				for(var i = 0, l = this.subviews.length; i < l; i++) this.subviews[i].undelegateModelEventsAll();
-			}
-		}
-	},
-
-
-	/**
-	 * Binds model events to the view. Accepts array of arrays in the form:
-	 *
-	 * [
-	 *     ['modelName', 'eventType', 'methodName'],
-	 * ]
-	 *
-	 * The first item is a name of the model.
-	 * The second item is an event name
-	 * The third item is the view method name (string) that acts as an event
-	 * handler
-	 *
-	 * @param {Array} events Array of arrays of binding config
-	 */
-	delegateModelEvents: function(events)
-	{
-		var event, i, l, fn, model;
-		this.undelegateModelEvents();
-		events = events || this.modelEvents;
-
-		for(i = 0, l = events.length; i < l; i++)
-		{
-			event = events[i];
-			model = this.getModel(event[0]);
-			if(event.length === 3 && model)
-			{
-				if(typeof event[2] === 'string') fn = this.f(event[2]);
-				else fn = event[2];
-				model.on(event[1], fn);
-			}
-		}
-	},
-
-	/**
-	 * Unbinds model events from the view. Accepts array of arrays in the form:
-	 *
-	 * [
-	 *     ['modelName', 'eventType', 'methodName']
-	 * ]
-	 *
-	 * The first item is a name of the model. The second item is an event name
-	 * The third item is the view method name (string) that acts as an event
-	 * handler
-	 *
-	 * @param {Array} events Array of arrays of binding config
-	 */
-	undelegateModelEvents: function(events)
-	{
-		var event, i, l, fn, model;
-		events = events || this.modelEvents;
-
-		for(i = 0, l = events.length; i < l; i++)
-		{
-			event = events[i];
-			model = this.getModel(event[0]);
-			if(event.length === 3 && model)
-			{
-				if(typeof event[2] === 'string') fn = this.f(event[2]);
-				else fn = event[2];
-				model.off(event[1], fn);
-			}
-		}
-	},
-
-	delegateEventTriggers: function()
-	{
-		if(this.eventTriggers)
-		{
-			for(var i = 0, l = this.eventTriggers.length; i < l; i++)
-			{
-				this.eventTriggers[i][2] = this.f(function(){
-					this.callTriggerMethod.apply(this, arguments);
-				}, [this.eventTriggers[i][3]]);
-			}
-			this.delegateEvents(this.eventTriggers);
-		}
-	},
-
-	/**
 	 * Creates a new subview and adds it to the internal subviews list.
 	 * The new subview is created using the viewFactory and gets properly set
 	 * parentView.
@@ -3179,7 +2124,21 @@ kff.View = kff.createClass(
 	 */
 	createView: function(viewName, options)
 	{
+		var subviewScope;
 		options.parentView = this;
+
+		if(this.subviewsScope)
+		{
+			subviewScope = this.subviewsScope[viewName];
+
+			if(typeof subviewScope === 'object' && subviewScope !== null)
+			{
+				var defaultViewOptions = this.viewFactory.getDefaultViewOptions(viewName);
+				if(defaultViewOptions) options = kff.mixins(defaultViewOptions, options);
+				if(options.scope) kff.mixins(options.scope, subviewScope);
+				else options.scope = subviewScope;
+			}
+		}
 		var subView = this.viewFactory.createView(viewName, options);
 		if(subView instanceof kff.View)
 		{
@@ -3213,6 +2172,30 @@ kff.View = kff.createClass(
 		});
 	},
 
+	setSubviewsScope: function(subviewsScope)
+	{
+		if(subviewsScope)
+		{
+			if(this.parentView === null)
+			{
+				this.subviewsScope = subviewsScope;
+			}
+			else if(this.subviewsScope)
+			{
+				var keys = Object.keys(subviewsScope);
+				for(var i = 0, l = keys.length; i < l; i++)
+				{
+					key = keys[i];
+					this.subviewsScope[key] = subviewsScope[key];
+				}
+			}
+			else
+			{
+				this.subviewsScope = subviewsScope;
+			}
+		}
+	},
+
 	/**
 	 * Finds possible subview elements inside an element
 	 *
@@ -3224,111 +2207,37 @@ kff.View = kff.createClass(
 	 */
 	findViewElements: function(el)
 	{
-		var node, viewName, rendered, onAttr, optAttr, index = 0, subviewsStruct = null;
+		var node = el, viewName = null, rendered, onAttr, optAttr, index = 0, subviewsStruct = null;
 
-		if(el.hasChildNodes())
+		while((node = this.nextNode(el, node, viewName === null)) !== null)
 		{
-			node = el.firstChild;
-			while(node !== null)
-			{
-				viewName = null;
-				if(node.nodeType === 1)
-				{
-					rendered = node.getAttribute(kff.DATA_RENDERED_ATTR);
+			viewName = null;
+			rendered = node.getAttribute(kff.DATA_RENDERED_ATTR);
 
-					if(!rendered)
-					{
-						viewName = node.getAttribute(kff.DATA_VIEW_ATTR);
-						if(!viewName && node.getAttribute(kff.DATA_BIND_ATTR))
-						{
-							viewName = 'kff.View';
-							node.setAttribute(kff.DATA_VIEW_ATTR, viewName);
-						}
-						if(viewName)
-						{
-							optAttr = node.getAttribute(kff.DATA_OPTIONS_ATTR);
-							if(subviewsStruct === null) subviewsStruct = [];
-							subviewsStruct.push({
-								viewName: viewName,
-								index: index,
-								$element: $(node),
-								options: optAttr ? JSON.parse(optAttr) : {}
-							});
-						}
-						else
-						{
-							onAttr = node.getAttribute(kff.DATA_TRIGGER_ATTR);
-							if(onAttr)
-							{
-								this.processChildEventTriggers(node, onAttr, index);
-							}
-						}
-					}
-					index++;
+			if(!rendered)
+			{
+				viewName = node.getAttribute(kff.DATA_VIEW_ATTR);
+				if(!viewName && node.getAttribute(kff.DATA_BIND_ATTR))
+				{
+					viewName = 'kff.View';
+					node.setAttribute(kff.DATA_VIEW_ATTR, viewName);
 				}
-				node = this.nextNode(el, node, viewName === null);
+				if(viewName)
+				{
+					optAttr = node.getAttribute(kff.DATA_OPTIONS_ATTR);
+					if(subviewsStruct === null) subviewsStruct = [];
+					subviewsStruct.push({
+						viewName: viewName,
+						index: index,
+						$element: $(node),
+						options: optAttr ? JSON.parse(optAttr) : {}
+					});
+				}
 			}
+			index++;
 		}
 		return subviewsStruct;
 	},
-
-	/**
-	 * Process declarative events bound throught data-kff-trigger attribute on root view element
-	 *
-	 * @private
-	 */
-	processEventTriggers: function()
-	{
-		this.processChildEventTriggers(this.$element[0]);
-	},
-
-	/**
-	 * Process declarative events bound throught data-kff-trigger attribute on child element
-	 * @private
-	 * @param  {DOM Element} child  DOM Element
-	 */
-	processChildEventTriggers: function(child, onAttr, index)
-	{
-		var onAttrSplit, onAttrSplit2, events = [], i, l;
-		onAttr = onAttr || child.getAttribute(kff.DATA_TRIGGER_ATTR);
-		if(onAttr)
-		{
-			onAttrSplit = onAttr.split(/\s+/);
-			for(i = 0, l = onAttrSplit.length; i < l; i++)
-			{
-				onAttrSplit2 = onAttrSplit[i].split(':');
-				events.push([
-					onAttrSplit2[0].replace('|', ' '),
-					$(child),
-					null,
-					onAttrSplit2[1],
-					index
-				]);
-			}
-			this.addEventTriggers(events);
-		}
-	},
-
-	/**
-	 * Finds and calls a method registered as trigger handler.
-	 *
-	 * @private
-	 * @param  {Function} fn Function to be called
-	 */
-	callTriggerMethod: function(fn)
-	{
-		if(typeof this[fn] === 'function')
-		{
-			this[fn].apply(this, Array.prototype.slice.call(arguments, 1));
-		}
-
-		else if(this.parentView)
-		{
-			this.parentView.callTriggerMethod.apply(this.parentView, arguments);
-		}
-	},
-
-
 
 	/**
 	 * Refreshes data-binders in all subviews.
@@ -3381,14 +2290,14 @@ kff.View = kff.createClass(
 	 *
 	 * @param  {object} event Event object to dispatch
 	 */
-	dispatchEvent: function(action, event)
+	dispatchEvent: function(event)
 	{
 		var res, view = this;
 		while(view)
 		{
-			if(view.dispatcher !== null && view.dispatcher.hasAction(action))
+			if(view.dispatcher !== null && view.dispatcher.hasAction(event.type))
 			{
-				view.dispatcher.trigger(action, event);
+				view.dispatcher.trigger(event);
 				break;
 			}
 			view = view.parentView;
@@ -3403,7 +2312,7 @@ kff.View = kff.createClass(
 	getBindingIndex: function(modelName)
 	{
 		modelName = modelName || '*';
-		if(this.bindingIndex !== null && this.models.hasOwnProperty(modelName)) return this.bindingIndex;
+		if(this.bindingIndex !== null && this.scope.hasOwnProperty(modelName)) return this.bindingIndex;
 		if(this.parentView instanceof kff.View) return this.parentView.getBindingIndex(modelName);
 		return null;
 	},
@@ -3436,15 +2345,6 @@ kff.View = kff.createClass(
 		var clonedView = new this.constructor(options);
 		clonedView.viewFactory = this.viewFactory;
 
-		if(this.eventTriggers)
-		{
-			l = this.eventTriggers.length;
-			clonedView.eventTriggers = new Array(l);
-			while(l--)
-			{
-				clonedView.eventTriggers[l] = this.eventTriggers[l].slice();
-			}
-		}
 
 		if(this.subviews !== null)
 		{
@@ -3478,8 +2378,7 @@ kff.View = kff.createClass(
 			{
 				view: clonedView,
 				collection: null,
-				collectionPathArray: this.collectionBinder.collectionPathArray,
-				nobind: this.collectionBinder.nobind
+				collectionPathArray: this.collectionBinder.collectionPathArray
 			});
 		}
 
@@ -3495,36 +2394,38 @@ kff.View = kff.createClass(
 
 	setParentView: function(parentView)
 	{
-		var oldModels, oldHelpers, key, i, l;
+		var oldScope, key, i, l;
 
 		this.parentView = parentView;
 
-		oldModels = this.models || null;
+		oldScope = this.scope || null;
 
-		this.models = kff.createObject(parentView.models);
+		this.scope = kff.createObject(parentView.scope);
 
-		if(oldModels)
+		if(oldScope)
 		{
-			for(key in oldModels)
+			var keys = Object.keys(oldScope);
+			for(i = 0, l = keys.length; i < l; i++)
 			{
-				if(oldModels.hasOwnProperty(key))
-				{
-					this.models[key] = oldModels[key];
-				}
+				key = keys[i];
+				this.scope[key] = oldScope[key];
+
 			}
 		}
 
-		oldHelpers = this.helpers || null;
+		var oldSubviewsScope = this.subviewsScope || null;
 
-		this.helpers = kff.createObject(parentView.helpers);
-
-		if(oldHelpers)
+		if(parentView.subviewsScope)
 		{
-			for(key in oldHelpers)
+			this.subviewsScope = kff.createObject(parentView.subviewsScope);
+
+			if(oldSubviewsScope)
 			{
-				if(oldHelpers.hasOwnProperty(key))
+				var keys = Object.keys(oldSubviewsScope);
+				for(i = 0, l = keys.length; i < l; i++)
 				{
-					this.helpers[key] = oldHelpers[key];
+					key = keys[i];
+					this.subviewsScope[key] = oldSubviewsScope[key];
 				}
 			}
 		}
@@ -3552,23 +2453,13 @@ kff.View = kff.createClass(
 	 */
 	rebindElement: function(element)
 	{
-		var i, l, eventTriggersIndex = 0;
+		var i, l;
 
 		this.$element = $(element);
-
-		if(this.eventTriggers)
-		{
-			while(this.eventTriggers[eventTriggersIndex] && typeof this.eventTriggers[eventTriggersIndex][4] === 'undefined')
-			{
-				this.eventTriggers[eventTriggersIndex][1] = this.$element;
-				eventTriggersIndex++;
-			}
-		}
 
 		this.rebindSubViews(element, {
 			subviewIndex: 0,
 			subviewsStructIndex: 0,
-			eventTriggersIndex: eventTriggersIndex,
 			index: 0
 		});
 
@@ -3579,7 +2470,6 @@ kff.View = kff.createClass(
 
 		if(this.collectionBinder)
 		{
-			this.collectionBinder.collection = this.getModel(this.collectionBinder.collectionPathArray);
 			this.collectionBinder.view = this;
 		}
 
@@ -3587,69 +2477,55 @@ kff.View = kff.createClass(
 
 	rebindSubViews: function(el, ids)
 	{
-		var node, doSubviews;
-		if(this.subviewsStruct !== null)
+		var node = el, doSubviews = true;
+		var subviews = this.subviews, subviewsStruct = this.subviewsStruct;
+		if(subviewsStruct !== null)
 		{
-			if(this.subviews === null) this.subviews = [];
-			if(el.hasChildNodes())
-			{
-				node = el.firstChild;
+			if(subviews === null) this.subviews = subviews = [];
 
-				while(node !== null)
+			while((node = this.nextNode(el, node, doSubviews)) !== null)
+			{
+				if(subviewsStruct[ids.subviewIndex])
 				{
-					if(node.nodeType === 1)
+					ids.subviewsStructIndex = subviewsStruct[ids.subviewIndex].index;
+					if(ids.index === ids.subviewsStructIndex)
 					{
-						if(this.subviewsStruct[ids.subviewIndex])
+						if(subviews[ids.subviewIndex])
 						{
-							ids.subviewsStructIndex = this.subviewsStruct[ids.subviewIndex].index;
-							if(ids.index === ids.subviewsStructIndex)
-							{
-								if(this.subviews[ids.subviewIndex])
-								{
-									this.subviews[ids.subviewIndex].rebindElement(node);
-								}
-								ids.subviewIndex++;
-								doSubviews = false;
-							}
-							else doSubviews = true;
+							subviews[ids.subviewIndex].rebindElement(node);
 						}
-						else
-						{
-							if(!this.eventTriggers) this.eventTriggers = [];
-							while(this.eventTriggers[ids.eventTriggersIndex] && this.eventTriggers[ids.eventTriggersIndex][4] === ids.index)
-							{
-								this.eventTriggers[ids.eventTriggersIndex][1] = $(node);
-								ids.eventTriggersIndex++;
-							}
-						}
-						ids.index++;
+						ids.subviewIndex++;
+						doSubviews = false;
 					}
-					node = this.nextNode(el, node, doSubviews);
+					else doSubviews = true;
 				}
+				ids.index++;
 			}
 		}
 	},
 
 	nextNode: function(root, node, deep)
 	{
-		var parentNode, nextSibling;
-		if(deep && node.hasChildNodes())
-		{
-			node = node.firstChild;
-		}
-		else
-		{
-			parentNode = node.parentNode;
-			nextSibling = node.nextSibling;
-			while(node !== root && nextSibling === null && parentNode !== null)
+		var parentNode, nextSibling, tempNode;
+		do {
+			if(deep && (tempNode = node.firstChild))
 			{
-				node = parentNode;
+				node = tempNode;
+			}
+			else
+			{
 				parentNode = node.parentNode;
 				nextSibling = node.nextSibling;
+				while(node !== root && nextSibling === null && parentNode !== null)
+				{
+					node = parentNode;
+					parentNode = node.parentNode;
+					nextSibling = node.nextSibling;
+				}
+				if(node && node !== root) node = nextSibling;
+				else node = null;
 			}
-			if(node && node !== root) node = nextSibling;
-			else node = null;
-		}
+		} while (node && node.nodeType !== 1);
 		return node;
 	},
 
@@ -3691,7 +2567,7 @@ kff.View = kff.createClass(
 			{
 				if(selector !== 'self')
 				{
-					saveRegion(regions, this.cachedRegions, this.$docElement[0].querySelectorAll(selector), selector);
+					saveRegion(regions, this.cachedRegions, this.$element[0].querySelectorAll(selector), selector);
 				}
 
 			}
@@ -3728,7 +2604,7 @@ kff.View = kff.createClass(
 			{
 				if(selector !== 'self')
 				{
-					unsaveRegion(regions, this.cachedRegions, this.$docElement[0].querySelectorAll(selector), selector);
+					unsaveRegion(regions, this.cachedRegions, this.$element[0].querySelectorAll(selector), selector);
 				}
 			}
 		}
@@ -3769,13 +2645,9 @@ kff.View = kff.createClass(
 	 */
 	initBinding: function()
 	{
-		var model, attr, result, result2, modelPathArray, i, ret;
+		var model, attr, result, result2, modelPathArray, i, ret, modelArgs;
 		var dataBindAttr = this.$element[0].getAttribute(kff.DATA_BIND_ATTR);
-		var modelName, isCollectionBinder;
-
-		var bindingRegex = kff.View.bindingRegex;
-		var leadingPeriodRegex = kff.View.leadingPeriodRegex;
-		var trailingPeriodRegex = kff.View.trailingPeriodRegex;
+		var modelName;
 
 		bindingRegex.lastIndex = 0;
 
@@ -3785,90 +2657,70 @@ kff.View = kff.createClass(
 		{
 			modelPathArray = result[1].replace(leadingPeriodRegex, '*.').replace(trailingPeriodRegex, '.*').split('.');
 
-			model = this.getModel(modelPathArray);
-			ret = null;
+			modelArgs = result[2];
 
-			isCollectionBinder = model instanceof kff.Collection;
-
-			if(!isCollectionBinder)
+			if(modelArgs)
 			{
-				ret = this.parseBindingRegexp(result, true);
-
-				if(ret.binderName === 'list' || ret.binderName === 'each' && model instanceof Array)
+				modelArgs = modelArgs.split(commaSeparateRegex);
+				for(var k = 0, kl = modelArgs.length; k < kl; k++)
 				{
-					isCollectionBinder = true;
-				}
-				else
-				{
-					if(!ret.binderName || !(ret.binderName in kff.View.binders)) break;
-
-
-					if(modelPathArray.length > 1) attr = modelPathArray.pop();
-					else attr = null;
-
-					if(attr === '*') attr = null;
-
-					modelName = modelPathArray.length > 0 ? modelPathArray[0] : null;
-					model = this.getModel(modelPathArray);
-
-					// Special binding for collection count property
-					if(model instanceof kff.Collection && attr === 'count')
+					if(modelArgs[k].charAt(0) === '@')
 					{
-						if(!this.collectionCountBinder) this.collectionCountBinder = new kff.CollectionCountBinder();
-						model = this.collectionCountBinder.bindCollectionCount(model);
+						modelArgs[k] = modelArgs[k].slice(1).split('.');
 					}
-					var indexed = false;
-
-					for(var j = ret.formatters.length - 1; j >= 0; j--)
-					{
-						if(ret.formatters[j].fn.indexed === true) indexed = true;
-					}
-
-					var modelBinder = new kff.View.binders[ret.binderName]({
-						view: this,
-						$element: this.$element,
-						params: ret.binderParams,
-						attr: attr,
-						model: model,
-						modelName: modelName,
-						modelPathArray: modelPathArray,
-						formatters: ret.formatters,
-						parsers: ret.parsers,
-						setter: (ret.setters && ret.setters.length > 0) ? ret.setters[0] : null,
-						getter: (ret.getters && ret.getters.length > 0) ? ret.getters[0] : null,
-						dispatch: ret.dispatch,
-						eventNames: ret.eventNames,
-						eventFilters: ret.eventFilters,
-						fill: ret.fill,
-						nobind: ret.nobind,
-						nopreventdef: ret.nopreventdef,
-						watchModelPath: ret.watchModelPath,
-						indexed: indexed
-					});
-
-					this.modelBindersMap.add(modelBinder);
 				}
 			}
 
-			if(isCollectionBinder)
-			{
-				if(!ret) ret = this.parseBindingRegexp(result, false);
-				else ret.nobind = true;
+			var keyPath = modelPathArray;
+			if(keyPath.length > 1 && keyPath[keyPath.length - 1] === '*') keyPath.pop();
 
+			ret = this.parseBindingRegexp(result, true);
+
+			if(ret.binderName === 'each')
+			{
 				if(!this.options.isBoundView)
 				{
 					this.collectionBinder = new kff.CollectionBinder({
 						view: this,
-						collection: model,
-						collectionPathArray: modelPathArray,
-						nobind: ret.nobind
+						keyPath: keyPath,
+						collectionArgs: modelArgs,
+						filter: (ret.filter && ret.filter.length > 0) ? ret.filter[0] : null,
+						sort: (ret.sort && ret.sort.length > 0) ? ret.sort[0] : null
 					});
 					if(ret.itemAliases && ret.itemAliases.length > 0)
 					{
 						this.itemAlias = ret.itemAliases[0];
 					}
-					// this.boundViews = [];
 				}
+			}
+			else
+			{
+				if(!ret.binderName || !(ret.binderName in kff.View.binders)) break;
+
+				var indexed = false;
+
+				for(var j = ret.formatters.length - 1; j >= 0; j--)
+				{
+					if(ret.formatters[j].fn.indexed === true) indexed = true;
+				}
+
+				var modelBinder = new kff.View.binders[ret.binderName]({
+					view: this,
+					$element: this.$element,
+					params: ret.binderParams,
+					keyPath: keyPath,
+					modelArgs: modelArgs,
+					formatters: ret.formatters,
+					parsers: ret.parsers,
+					dispatch: ret.dispatch,
+					eventNames: ret.eventNames,
+					eventFilters: ret.eventFilters,
+					fill: ret.fill,
+					nopreventdef: ret.nopreventdef,
+					indexed: indexed
+				});
+
+				this.modelBindersMap.add(modelBinder);
 			}
 		}
 	},
@@ -3884,9 +2736,7 @@ kff.View = kff.createClass(
 	parseBindingRegexp: function(result, parseBinderName)
 	{
 		var result2, i, modifierName, modifierParams;
-		var modifierSeparateRegex = kff.View.modifierSeparateRegex;
-		var commaSeparateRegex = kff.View.commaSeparateRegex;
-		var operatorsRegex = kff.View.operatorsRegex;
+
 		operatorsRegex.lastIndex = 0;
 
 		var ret = {
@@ -3900,14 +2750,15 @@ kff.View = kff.createClass(
 			eventFilters: [],
 			dispatch: null,
 			fill: false,
-			nobind: false,
 			watchModelPath: false,
 			nopreventdef: false,
-			itemAliases: []
+			itemAliases: [],
+			filter: [],
+			sort: []
 		};
 
 		i = 0;
-		while((result2 = operatorsRegex.exec(result[2])) !== null)
+		while((result2 = operatorsRegex.exec(result[3])) !== null)
 		{
 			if(parseBinderName && i === 0)
 			{
@@ -3944,12 +2795,6 @@ kff.View = kff.createClass(
 					case 'as':
 						this.parseSetters(modifierParams, ret.itemAliases);
 						break;
-					case 'set':
-						this.parseGetters(modifierParams, ret.setters);
-						break;
-					case 'get':
-						this.parseGetters(modifierParams, ret.getters);
-						break;
 					case 'evf':
 						this.parseHelpers(modifierParams, ret.eventFilters);
 						break;
@@ -3957,14 +2802,14 @@ kff.View = kff.createClass(
 						ret.dispatch = [];
 						this.parseSetters(modifierParams, ret.dispatch);
 						break;
+					case 'filter':
+						this.parseSetters(modifierParams, ret.filter);
+						break;
+					case 'sort':
+						this.parseSetters(modifierParams, ret.sort);
+						break;
 					case 'fill':
 						ret.fill = true;
-						break;
-					case 'watch':
-						ret.watchModelPath = true;
-						break;
-					case 'nobind':
-						ret.nobind = true;
 						break;
 					case 'nopreventdef':
 						ret.nopreventdef = true;
@@ -3999,7 +2844,7 @@ kff.View = kff.createClass(
 			{
 				modifierArgs = [];
 			}
-			if(this.helpers[modifierParam]) modifiers.push({ fn: this.helpers[modifierParam], args: modifierArgs });
+			if(this.scope[modifierParam]) modifiers.push({ fn: this.scope[modifierParam], args: modifierArgs });
 			else if(kff.View.helpers[modifierParam]) modifiers.push({ fn: kff.View.helpers[modifierParam], args: modifierArgs });
 		}
 	},
@@ -4058,21 +2903,16 @@ kff.View = kff.createClass(
 			this.modelBindersMap.destroyBinders();
 			this.modelBindersMap = null;
 		}
-		if(this.collectionCountBinder)
-		{
-			this.collectionCountBinder.destroy();
-			this.collectionCountBinder = null;
-		}
 	},
 
 	/**
-	 * Rebinds models of all binders that belong to this view
+	 * Rebinds cursors of all binders that belong to this view
 	 *
 	 * @private
 	 */
-	rebindModels: function()
+	rebindCursors: function()
 	{
-		if(this.modelBindersMap) this.modelBindersMap.rebindModels();
+		if(this.modelBindersMap) this.modelBindersMap.rebindCursors();
 	},
 
 	/**
@@ -4083,47 +2923,17 @@ kff.View = kff.createClass(
 	refreshOwnBinders: function(force)
 	{
 		if(this.modelBindersMap) this.modelBindersMap.refreshBinders(force);
-	},
-
-	getBoundModelPathArray: function(modelPathArray)
-	{
-		var rootModelPathArray = [];
-		var modelName = modelPathArray[0];
-		var view = this;
-		var collectionBinder;
-
-		while(view)
-		{
-			if(view.models.hasOwnProperty(modelName))
-			{
-				rootModelPathArray = modelPathArray.concat(rootModelPathArray);
-				if(view.options.isBoundView)
-				{
-					if(modelName === '*' || modelName === view.itemAlias)
-					{
-						collectionBinder =  view.parentView.collectionBinder;
-						rootModelPathArray[0] = collectionBinder.getCollectionIndex(view.models[modelName]);
-
-						modelPathArray = collectionBinder.collectionPathArray;
-						modelName = modelPathArray[0];
-						view = view.parentView;
-					}
-				}
-			}
-			view = view.parentView;
-		}
-
-		return rootModelPathArray;
 	}
 
-
 });
+})()
+
+kff.BindingView = kff.View;
 
 
 kff.PageView = kff.createClass(
 {
 	extend: kff.View,
-	mixins: kff.EventsMixin,
 	statics:
 	{
 		precedingView: null,
@@ -4167,57 +2977,6 @@ kff.PageView = kff.createClass(
 	{
 		if(!$element) $element = this.$docElement;
 		kff.PageView._super.undelegateEvents.call(this, events, $element);
-	},
-
-	/**
-	 * Sets a new state of the view. Called by the front controller.
-	 *
-	 * @param {Object} state The state object (POJO)
-	 */
-	setState: function(state)
-	{
-		this.trigger('setState', state);
-	},
-
-	/**
-	 * Initializes the view. Calls the render method. Should not be overloaded
-	 * by subclasses.
-	 *
-	 * @private
-	 * @param
-	 */
-	init: function()
-	{
-		this.renderAll();
-		this.runAll();
-	},
-
-	/**
-	 * Runs the view (i.e. binds events and models). It will be called automatically. Should not be called
-	 * directly.
-	 */
-	runAll: function()
-	{
-		if(kff.View.prototype.runAll.call(this) !== false)
-		{
-			this.trigger('render');
-		}
-	},
-
-	/**
-	 * Destroys the view (destroys all subviews and unbinds previously bound DOM events.
-	 * It will be called automatically. Should not be called directly.
-	 *
-	 * @param {Boolean} silent If true, the 'destroy' event won't be called
-	 */
-	destroyAll: function()
-	{
-		var ret = kff.View.prototype.destroyAll.call(this);
-
-		if(ret !== false)
-		{
-			this.trigger('destroy');
-		}
 	}
 
 });
@@ -4276,7 +3035,7 @@ kff.BinderMap = kff.createClass(
 			b = this.binders[i];
 			b.view = view;
 			b.$element = view.$element;
-			b.model = view.getModel(b.options.modelPathArray);
+			b.model = null;
 			b.value = null;
 		}
 	},
@@ -4310,9 +3069,9 @@ kff.BinderMap = kff.createClass(
 	/**
 	 * Rebinds models of all binders
 	 */
-	rebindModels: function()
+	rebindCursors: function()
 	{
-		for(var i = 0, l = this.binders.length; i < l; i++) this.binders[i].rebindModel();
+		for(var i = 0, l = this.binders.length; i < l; i++) this.binders[i].rebindCursor();
 	},
 
 	/**
@@ -4330,9 +3089,6 @@ kff.BinderMap = kff.createClass(
 	}
 
 });
-
-
-kff.BindingView = kff.View;
 
 
 (function(){
@@ -4407,15 +3163,11 @@ kff.Binder = kff.createClass(
 
 		this.view = options.view;
 		this.$element = options.$element;
-		this.model = options.model;
-		this.setter = options.setter;
-		this.getter = options.getter;
+		this.cursor = null;
+		this.keyPath = options.keyPath;
 		this.dispatch = options.dispatch;
 		this.currentValue = null;
-		this.bindingIndex = null;
-		this.dynamicBindings = null;
 		this.value = null;
-		this.modelPathWatcher = null;
 	},
 
 	/**
@@ -4425,23 +3177,10 @@ kff.Binder = kff.createClass(
 	{
 		if(!this.options.nobind)
 		{
-			if(this.options.watchModelPath)
-			{
-				var rootModel = this.view.models[this.options.modelPathArray[0]];
-				var modelPathArray = this.options.modelPathArray.slice(1);
-				modelPathArray.push(this.options.attr);
-				this.modelPathWatcher = new kff.ModelPathWatcher(rootModel, modelPathArray);
-				this.modelPathWatcher.init();
-				this.bindModelPathWatcher();
-				if(this.$element && this.options.events !== null) this.delegateEvents(this.options.events);
-			}
-			else if(this.model instanceof kff.Model)
-			{
-				this.bindModel();
-			}
 			if(this.$element && this.options.events !== null) this.delegateEvents(this.options.events);
 		}
-		if(this.options.fill && this.model instanceof kff.Model) this.fill();
+		this.rebindCursor();
+		if(this.options.fill) this.fill();
 	},
 
 	/**
@@ -4449,8 +3188,6 @@ kff.Binder = kff.createClass(
 	 */
 	destroy: function()
 	{
-		if(this.model instanceof kff.Model) this.unbindModel();
-		if(this.options.watchModelPath) this.unbindModelPathWatcher();
 		if(this.$element && this.options.events !== null) this.undelegateEvents(this.options.events);
 		this.currentValue = null;
 		this.value = null;
@@ -4473,47 +3210,21 @@ kff.Binder = kff.createClass(
 	 */
 	modelChange: function(event, force)
 	{
-		var modelValue;
-		if(this.modelPathWatcher)
+		var modelValue, formattedValue;
+
+		modelValue = this.cursor.get();
+
+		if(typeof modelValue === 'function')
 		{
-			this.model = this.modelPathWatcher.model;
+			modelValue = this.callModelAsFunction(modelValue, this.options.modelArgs);
 		}
-		if(this.model instanceof kff.Model || (typeof this.model === 'object' && this.model !== null))
-		{
-			if(this.getter && typeof this.model[this.getter.fn] === 'function')
-			{
-				if(this.getter.args.length > 0)
-				{
-					var args = [];
-					for(var i = 0, l = this.getter.args.length; i < l; i++)
-					{
-						if(this.getter.args[i] === '@attr') args[i] = this.options.attr;
-						else args[i] = this.view.getModel(this.getter.args[i]);
-					}
-					modelValue = this.model[this.getter.fn].apply(this.model, args);
-				}
-				else
-				{
-					modelValue = this.model[this.getter.fn](this.options.attr);
-				}
-			}
-			else if(event) modelValue = event.changed[this.options.attr];
-			else if(typeof this.options.attr === 'string')
-			{
-				if(typeof this.model.get === 'function') modelValue = this.model.get(this.options.attr);
-				else modelValue = this.model[this.options.attr];
-			}
-			else modelValue = null;
-		}
-		else if(typeof this.model === 'string' || typeof this.model === 'number' || typeof this.model === 'boolean')
-		{
-			modelValue = this.model;
-		}
+
 		if(modelValue !== 'undefined')
 		{
-			if(force || !this.compareValues(modelValue, this.currentValue))
+			formattedValue = this.format(modelValue);
+			if(force || !this.compareValues(formattedValue, this.value))
 			{
-				this.value = this.format(modelValue);
+				this.value = formattedValue;
 				this.currentValue = modelValue;
 				this.refresh();
 			}
@@ -4530,28 +3241,6 @@ kff.Binder = kff.createClass(
 	compareValues: function(value1, value2)
 	{
 		return value1 === value2;
-	},
-
-	/**
-	 * Compare if two arrays are of the same length and contain the same values compared by the strict equal operator
-	 *
-	 * @param  {Array} value1 Array 1
-	 * @param  {Array} value2 Array 2
-	 * @return {boolean}      Result of comparsion
-	 */
-	compareArrayValues: function(value1, value2)
-	{
-		if((value1 instanceof Array) && (value2 instanceof Array))
-		{
-			var l = value1.length;
-			if(l !== value2.length) return false;
-			for(var i = 0; i < l; i++)
-			{
-				if(value1[i] !== value2[i]) return false;
-			}
-			return true;
-		}
-		else return false;
 	},
 
 	/**
@@ -4573,6 +3262,7 @@ kff.Binder = kff.createClass(
 	updateModel: function(value, event)
 	{
 		var i, l;
+		this.value = value;
 		if(value instanceof Array)
 		{
 			for(i = 0, l = value.length; i < l; i++) value[i] = this.parse(value[i]);
@@ -4585,62 +3275,29 @@ kff.Binder = kff.createClass(
 
 		this.currentValue = value;
 
-		if(this.dispatch)
+		var action = 'set';
+		var params = [];
+		if(this.dispatch && this.dispatch.length > 0)
 		{
-			var action = 'set';
-			var params = [];
-			if(this.dispatch.length > 0)
+			action = this.dispatch[0];
+			for(i = 1, l = this.dispatch.length; i < l; i++)
 			{
-				action = this.dispatch[0];
-				for(i = 1, l = this.dispatch.length; i < l; i++)
-				{
-					if(this.dispatch[i].charAt(0) === '@') params.push(this.view.getModel(this.dispatch[i].slice(1)));
-					else
-					{
-						if(this.options.parsers.length === 0) params.push(this.convertValueType(this.dispatch[i]));
-						else params.push(this.parse(this.dispatch[i]));
-					}
-				}
-
-			}
-
-			var rootModelPathArray = this.view.getBoundModelPathArray(this.options.modelPathArray);
-			var rootModel = this.view.models[rootModelPathArray.shift()];
-			if(this.options.attr) rootModelPathArray.push(this.options.attr);
-			this.view.dispatchEvent(action, {
-				model: rootModel,
-				keyPath: rootModelPathArray,
-				value: value,
-				domEvent: event,
-				params: params
-			});
-		}
-		else if(typeof this.model === 'object' && this.model !== null)
-		{
-			if(this.setter && typeof this.model[this.setter.fn] === 'function')
-			{
-				if(this.setter.args.length > 0)
-				{
-					var args = [];
-					for(i = 0, l = this.setter.args.length; i < l; i++)
-					{
-						if(this.setter.args[i] === '@val') args[i] = this.currentValue;
-						else if(this.setter.args[i] === '@attr') args[i] = this.options.attr;
-						else args[i] = this.view.getModel(this.setter.args[i]);
-					}
-					this.model[this.setter.fn].apply(this.model, args);
-				}
-				else if(this.options.attr === null)
-				{
-					this.model[this.setter.fn](this.currentValue);
-				}
+				if(this.dispatch[i].charAt(0) === '@') params.push(this.view.getCursor(this.dispatch[i].slice(1)));
 				else
 				{
-					this.model[this.setter.fn](this.options.attr, this.currentValue);
+					if(this.options.parsers.length === 0) params.push(this.convertValueType(this.dispatch[i]));
+					else params.push(this.parse(this.dispatch[i]));
 				}
 			}
-			else if(typeof this.model.set === 'function') this.model.set(this.options.attr, this.currentValue);
 		}
+
+		this.view.dispatchEvent({
+			type: action,
+			cursor: this.cursor,
+			value: value,
+			domEvent: event,
+			params: params
+		});
 	},
 
 	/**
@@ -4657,10 +3314,10 @@ kff.Binder = kff.createClass(
 			if(value instanceof Array)
 			{
 				value2 = [];
-				for(j = 0, k = value.length; j < k; j++) value2[j] = this.options.formatters[i].fn.apply(this, [value[j]].concat(this.options.formatters[i].args));
+				for(j = 0, k = value.length; j < k; j++) value2[j] = this.options.formatters[i].fn.apply(this, kff.arrayConcat([value[j]], this.options.formatters[i].args));
 				value = value2;
 			}
-			else value = this.options.formatters[i].fn.apply(this, [value].concat(this.options.formatters[i].args));
+			else value = this.options.formatters[i].fn.apply(this, kff.arrayConcat([value], this.options.formatters[i].args));
 		}
 		return value;
 	},
@@ -4679,10 +3336,10 @@ kff.Binder = kff.createClass(
 			if(value instanceof Array)
 			{
 				value2 = [];
-				for(j = 0, k = value.length; j < k; j++) value2[j] = this.options.parsers[i].fn.apply(this, [value[j]].concat(this.options.parsers[i].args));
+				for(j = 0, k = value.length; j < k; j++) value2[j] = this.options.parsers[i].fn.apply(this, kff.arrayConcat([value[j]], this.options.parsers[i].args));
 				value = value2;
 			}
-			else value = this.options.parsers[i].fn.apply(this, [value].concat(this.options.parsers[i].args));
+			else value = this.options.parsers[i].fn.apply(this, kff.arrayConcat([value], this.options.parsers[i].args));
 		}
 		return value;
 	},
@@ -4719,58 +3376,13 @@ kff.Binder = kff.createClass(
 	fill: kff.noop,
 
 	/**
-	 * Binds event listeners to the model
-	 */
-	bindModel: function()
-	{
-		if(this.model instanceof kff.Model) this.model.on('change' + (this.options.attr === null ? '' : ':' + this.options.attr), this.f('modelChange'));
-	},
-
-	/**
-	 * Unbinds event listeners from the model
-	 */
-	unbindModel: function()
-	{
-		if(this.model instanceof kff.Model) this.model.off('change' + (this.options.attr === null ? '' : ':' + this.options.attr), this.f('modelChange'));
-	},
-
-	/**
-	 * Sets up the model path watcher on the model. The model path watcher binds listeners to every model in model
-	 * keypath and rebinds them on a change of any intermediate model so that model is always up to date.
-	 *
-	 * @private
-	 */
-	bindModelPathWatcher: function()
-	{
-		this.modelPathWatcher.on('change' + (this.options.attr === null ? '' : ':' + this.options.attr), this.f('modelChange'));
-	},
-
-	/**
-	 * Unbinds any listeners previously bound by bindModelPathWatcher
-	 *
-	 * @private
-	 */
-	unbindModelPathWatcher: function()
-	{
-		this.modelPathWatcher.off('change' + (this.options.attr === null ? '' : ':' + this.options.attr), this.f('modelChange'));
-	},
-
-	/**
 	 * Rebinds model event listeners for the actual model retrieved by model keypath.
 	 *
 	 * @private
 	 */
-	rebindModel: function()
+	rebindCursor: function()
 	{
-		if(!this.options.nobind)
-		{
-			this.unbindModel();
-		}
-		this.model = this.view.getModel(this.options.modelPathArray);
-		if(!this.options.nobind)
-		{
-			this.bindModel();
-		}
+		this.cursor = this.view.getCursor(this.keyPath);
 	},
 
 	/**
@@ -4821,58 +3433,20 @@ kff.Binder = kff.createClass(
 		var n = value - 0;
 		if(n == value) return n;
 		return value;
-	}
-});
-
-
-kff.CollectionCountBinder = kff.createClass(
-/** @lends kff.CollectionCountBinder.prototype */
-{
-	/**
-	 * @constructs
-	 */
-	constructor: function()
-	{
-		this.boundCollectionCounts = [];
 	},
 
-	/**
-	 * Special binding for Collection count property which is not bindable in a standard way.
-	 * Creates a proxy model object that observes the collection for a change event and mirrors the
-	 * count property of collection in the count attribute of the proxy model.
-	 *
-	 * @param {kff.Collection} collection The collection to be observed
-	 */
-	bindCollectionCount: function(collection)
+	callModelAsFunction: function(model, modelArgs)
 	{
-		var model = new kff.Model();
-		var handler = function(){
-			model.set('count', collection.count());
-		};
-
-		handler();
-
-		this.boundCollectionCounts.push({
-			collection: collection,
-			handler: handler
-		});
-		collection.on('change', handler);
-		return model;
-	},
-
-	/**
-	 * Destroys all collection count bindings previously created by the bindCollectionCount method
-	 */
-	destroy: function()
-	{
-		if(this.boundCollectionCounts)
+		var args = [];
+		if(modelArgs instanceof Array)
 		{
-			for(var i = 0, l = this.boundCollectionCounts.length; i < l; i++)
+			for(i = 0, l = modelArgs.length; i < l; i++)
 			{
-				this.boundCollectionCounts[i].collection.off('change', this.boundCollectionCounts[i].handler);
+				if(modelArgs[i] instanceof Array) args[i] = this.view.getCursor(modelArgs[i]);
+				else args[i] = kff.Binder.prototype.convertValueType(modelArgs[i]);
 			}
 		}
-		this.boundCollectionCounts = [];
+		return model.apply(null, args);
 	}
 });
 
@@ -4885,17 +3459,17 @@ kff.CollectionBinder = kff.createClass(
 	 */
 	constructor: function(options)
 	{
-		this.collection = options.collection || null;
-		this.collectionPathArray = options.collectionPathArray;
+		this.collection = null;
+		this.keyPath = options.keyPath;
+		this.collectionArgs = options.collectionArgs;
 		this.view = options.view;
-		this.nobind = options.nobind;
 		this.$elementTemplate = null;
-		this.collectionCounter = null;
 		this.boundViews = null;
 		this.anchor = null;
 		this.viewTemplate = null;
+		this.filter = options.filter;
+		this.sort = options.sort;
 	},
-
 
 	/**
 	 * Renders "bound" views.
@@ -4924,19 +3498,13 @@ kff.CollectionBinder = kff.createClass(
 
 		this.initCollectionFilter();
 		this.initCollectionSorter();
-		this.initCollectionCounter();
+		// this.initCollectionCounter();
 
 		this.boundViewOptions = opt ? JSON.parse(opt) : {};
 		this.boundViewOptions.parentView = this.view;
 		this.boundViewOptions.viewFactory = this.view.viewFactory;
 		this.boundViewOptions.env = this.view.env;
 		this.boundViewOptions.isBoundView = true;
-
-		if(this.nobind === false && this.collection instanceof kff.Collection)
-		{
-			this.collection.on('change', this.f('refreshBoundViews'));
-			if(this.collectionFilter || this.collectionSorter) this.collection.onEach('change', this.f('collectionItemChange'));
-		}
 
 		this.refreshBoundViews();
 	},
@@ -4949,12 +3517,6 @@ kff.CollectionBinder = kff.createClass(
 	destroyBoundViews: function()
 	{
 		var boundView, i, l;
-
-		if(this.nobind === false)
-		{
-			this.collection.off('change', this.f('refreshBoundViews'));
-			if(this.collectionFilter || this.collectionSorter) this.collection.offEach('change', this.f('collectionItemChange'));
-		}
 
 		// Destroy boundviews
 		if(this.boundViews !== null)
@@ -5002,132 +3564,19 @@ kff.CollectionBinder = kff.createClass(
 	 */
 	refreshBoundViews: function(event)
 	{
-		if(this.collectionSorter) this.refreshBoundViewsAll();
-		else
-		{
-			switch(event ? event.type : null)
-			{
-				case 'append':
-					this.refreshBoundViewsOnAppend(event);
-					break;
-				case 'remove':
-					this.refreshBoundViewsOnRemove(event);
-					break;
-				default:
-					this.refreshBoundViewsAll();
-			}
-		}
-		if(this.collectionCounter) this.collectionCounter.model.set(this.collectionCounter.attr, this.boundViews ? this.boundViews.length : 0);
+		this.refreshBoundViewsAll();
 	},
 
-	/**
-	 * Event handler for collection item change
-	 *
-	 * @private
-	 * @param  {mixed} event Model's event object
-	 */
-	collectionItemChange: function(event)
+	rebindCollection: function()
 	{
-		if(this.collectionSorter) this.refreshBoundViews();
-		else
+		this.cursor = this.view.getCursor(this.keyPath);
+		this.collection = this.cursor.get();
+
+		if(typeof this.collection === 'function')
 		{
-			var render = this.filterCollectionItem(event.model);
-			var index = this.filteredCollection.indexOf(event.model);
-			if((index !== -1) !== render) this.refreshBoundViews();
+			this.collection = kff.Binder.prototype.callModelAsFunction.call(this, this.collection, this.collectionArgs);
 		}
-	},
-
-	/**
-	 * Accepts or rejects an item of filtered collection binding
-	 *
-	 * @private
-	 * @param  {object} item  Item to filter
-	 * @return {boolean}      True if the item matches filter, false otherwise
-	 */
-	filterCollectionItem: function(item)
-	{
-		if(this.collectionFilter)
-		{
-			var collectionFilter = this.collectionFilter;
-			var filterModel = this.collectionFilter.model || null;
-			var filterFnName = this.collectionFilter.fn;
-			var currentFilterModel = filterModel || item;
-			return !!currentFilterModel[filterFnName](item);
-		}
-		return true;
-	},
-
-	/**
-	 * Updates bound views when collection changes by appending item.
-	 *
-	 * @private
-	 * @param {Object} event An event triggered by collection change
-	 */
-	refreshBoundViewsOnAppend: function(event)
-	{
-		var item = event.item;
-
-		if(this.filterCollectionItem(item))
-		{
-			if(this.collectionFilter)
-			{
-				if(!this.filteredCollection) this.filteredCollection = new kff.Collection();
-				this.filteredCollection.append(item);
-			}
-			else this.filteredCollection = this.collection;
-
-			var boundView = this.createBoundView(item);
-			boundView.runAll();
-			boundView.setBindingIndex(this.filteredCollection.count() - 1);
-			boundView.refreshBinders(true);
-
-			if(this.boundViews.length === 1)
-			{
-				if(this.anchor.parentNode)
-				{
-					this.anchor.parentNode.insertBefore(boundView.$element[0], this.anchor.nextSibling);
-				}
-			}
-			else
-			{
-				var $lastElement = this.boundViews[this.boundViews.length - 2].$element;
-				if($lastElement && $lastElement[0].parentNode)
-				{
-					$lastElement[0].parentNode.insertBefore(boundView.$element[0], $lastElement[0].nextSibling);
-				}
-			}
-		}
-	},
-
-	/**
-	 * Updates bound views when collection changes by removing item.
-	 *
-	 * @private
-	 * @param {Object} event An event triggered by collection change
-	 */
-	refreshBoundViewsOnRemove: function(event)
-	{
-		var i, l;
-		if(event.items !== undefined)
-		{
-			for(i = 0, l = event.items.length; i < l; i++)
-			{
-				this.refreshBoundViewsOnRemove(event.items[i]);
-			}
-		}
-		else
-		{
-			if(this.collectionFilter)
-			{
-				var renderIndex = this.filteredCollection.indexOf(event.item);
-				if(renderIndex !== -1) this.removeBoundViewAt(renderIndex);
-				this.filteredCollection.splice(renderIndex, 1);
-			}
-			else
-			{
-				this.removeBoundViewAt(event.index);
-			}
-		}
+		if(!(this.collection instanceof Array)) this.collection = [];
 	},
 
 	/**
@@ -5141,61 +3590,48 @@ kff.CollectionBinder = kff.createClass(
 		var docFragment = null;
 		var lastView, lastChild, parentNode, item;
 
+		this.rebindCollection();
+
 		if(this.boundViews === null) this.boundViews = [];
 
 		if(this.collectionFilter || this.collectionSorter)
 		{
 			if(this.collectionFilter)
 			{
-				this.filteredCollection = new kff.Collection();
+				this.filteredCollection = [];
 				collectionFilter = this.collectionFilter;
-				filterModel = this.collectionFilter.model || null;
-				filterFnName = this.collectionFilter.fn;
 
-				if(this.collection instanceof kff.Collection) a = this.collection.array;
-				else if(this.collection instanceof Array) a = this.collection;
+				a = this.collection;
 				for(i = 0, l = a.length; i < l; i++)
 				{
 					item = a[i];
-					var currentFilterModel = filterModel || item;
-					var render = !!currentFilterModel[filterFnName](item);
+					var render = !!collectionFilter(item);
 
-					if(render) this.filteredCollection.append(item);
+					if(render) this.filteredCollection.push(item);
 				}
 			}
 			else
 			{
-				if(this.collection instanceof kff.Collection) this.filteredCollection = this.collection.clone();
-				else
-				{
-					this.filteredCollection = new kff.Collection();
-					this.filteredCollection.array = this.collection.slice();
-				}
+				this.filteredCollection = this.collection.slice();
 			}
 
 			if(this.collectionSorter)
 			{
-				var sorterFn = this.collectionSorter.model.f(this.collectionSorter.fn);
-				this.filteredCollection.sort(sorterFn);
+				this.filteredCollection.sort(this.collectionSorter);
 			}
 		}
 		else
 		{
-			if(this.collection instanceof kff.Collection) this.filteredCollection = this.collection;
-			else
-			{
-				this.filteredCollection = new kff.Collection();
-				this.filteredCollection.array = this.collection;
-			}
+			this.filteredCollection = this.collection;
 		}
 
 		if(this.boundViews.length === 0)
 		{
 			// Fast initial rendering:
-			l = this.filteredCollection.count();
+			l = this.filteredCollection.length;
 			if(l > 0)
 			{
-				a = this.filteredCollection.array;
+				a = this.filteredCollection;
 				lastChild = this.anchor;
 				if(this.anchor.parentNode)
 				{
@@ -5219,16 +3655,16 @@ kff.CollectionBinder = kff.createClass(
 		else
 		{
 			// Diff based rendering:
-			var positions = new Array(this.filteredCollection.count());
+			var positions = new Array(this.filteredCollection.length);
 			var toRemoveViews = [];
 			var pos;
 			var lastViewIndex = null;
 			for(i = 0, l = this.boundViews.length; i < l; i++)
 			{
 				boundView = this.boundViews[i];
-				item = boundView.models['*'];
+				item = boundView.scope['*'].get();
 				if(typeof(item) !== 'object') newIndex = -1;
-				else newIndex = this.filteredCollection.indexOf(item);
+				else newIndex = kff.arrayIndexOf(this.filteredCollection, item);
 				pos = boundView;
 				if(newIndex !== -1)
 				{
@@ -5243,18 +3679,23 @@ kff.CollectionBinder = kff.createClass(
 
 			for(i = 0, l = positions.length; i < l; i++)
 			{
-				item = this.filteredCollection.get(i);
+				item = this.filteredCollection[i];
 				if(!positions[i])
 				{
 					pos = toRemoveViews.shift();
 					if(pos)
 					{
 						boundView = pos;
-						boundView.undelegateModelEventsAll();
-						boundView.models['*'] = item;
-						if(this.view.itemAlias) boundView.models[this.view.itemAlias] = item;
+						if(this.filteredCollection === this.collection)
+						{
+							boundView.scope['*'] = this.cursor.refine([i]);
+						}
+						else
+						{
+							boundView.scope['*'] = this.cursor.refine([this.collection.indexOf(item)]);
+						}
+						if(this.view.itemAlias) boundView.scope[this.view.itemAlias] = item;
 						boundView.setBindingIndex(i);
-						boundView.delegateModelEventsAll();
 						boundView.refreshAll();
 						if(i >= lastViewIndex) lastView = boundView;
 					}
@@ -5337,25 +3778,10 @@ kff.CollectionBinder = kff.createClass(
 	 */
 	initCollectionFilter: function()
 	{
-		var filterName = this.view.$element[0].getAttribute(kff.DATA_FILTER_ATTR);
-
-		if(filterName)
+		if(this.filter)
 		{
-			this.collectionFilter =
-			{
-				model: null,
-				fn: null
-			};
-			filterName = filterName.replace(/^\./, '').split('.');
-			if(filterName.length === 1)
-			{
-				this.collectionFilter.fn = filterName[0];
-			}
-			else
-			{
-				this.collectionFilter.fn =  filterName.pop();
-				this.collectionFilter.model =  this.view.getModel([].concat(filterName));
-			}
+			this.collectionFilter = this.view.getCursor(this.filter).get();
+			if(typeof this.collectionFilter !== 'function') this.collectionFilter = null;
 		}
 	},
 
@@ -5366,54 +3792,11 @@ kff.CollectionBinder = kff.createClass(
 	 */
 	initCollectionSorter: function()
 	{
-		var sorterName = this.view.$element[0].getAttribute(kff.DATA_SORT_ATTR);
-
-		if(sorterName)
+		if(this.sort)
 		{
-			this.collectionSorter =
-			{
-				model: null,
-				fn: null
-			};
-			sorterName = sorterName.replace(/^\./, '').split('.');
-			if(sorterName.length === 1)
-			{
-				this.collectionSorter.fn = sorterName[0];
-			}
-			else
-			{
-				this.collectionSorter.fn =  sorterName.pop();
-				this.collectionSorter.model =  this.view.getModel([].concat(sorterName));
-			}
+			this.collectionSorter = this.view.getCursor(this.sort).get();
+			if(typeof this.collectionSorter !== 'function') this.collectionSorter = null;
 		}
-		else this.collectionSorter = null;
-	},
-
-	/**
-	 * Inits counting of collection
-	 *
-	 * @private
-	 */
-	initCollectionCounter: function()
-	{
-		var counterName = this.view.$element[0].getAttribute(kff.DATA_COUNT_ATTR);
-
-		if(counterName)
-		{
-			this.collectionCounter =
-			{
-				model: null,
-				attr: null
-			};
-			counterName = counterName.replace(/^\./, '').split('.');
-			if(counterName.length >= 2)
-			{
-				this.collectionCounter.attr = counterName.pop();
-				this.collectionCounter.model =  this.view.getModel(counterName);
-			}
-			else this.collectionCounter = null;
-		}
-		else this.collectionCounter = null;
 	},
 
 	/**
@@ -5460,13 +3843,13 @@ kff.CollectionBinder = kff.createClass(
 	 * Creates a new bound view for item in collection
 	 *
 	 * @private
-	 * @param  {kff.Model} item Item for data-binding
+	 * @param  {Object} item Item for data-binding
 	 * @param  {number} i 		Binding index
 	 * @return {kff.View} 		created view
 	 */
-	createBoundView: function(item, i)
+	createBoundView: function(item)
 	{
-		var boundView, $element;
+		var boundView, $element, i;
 
 		if(!this.viewTemplate)
 		{
@@ -5478,17 +3861,22 @@ kff.CollectionBinder = kff.createClass(
 
 			boundView.collectionBinder = null;
 			boundView.modelBindersMap = this.view.modelBindersMap.clone();
-			if(i === undefined)
+
+			this.boundViews.push(boundView);
+			i = this.boundViews.length - 1;
+
+
+			if(this.filteredCollection === this.collection)
 			{
-				this.boundViews.push(boundView);
-				i = this.boundViews.length - 1;
+				boundView.scope['*'] = this.cursor.refine([i]);
 			}
 			else
 			{
-				this.boundViews.splice(i, 0, boundView);
+				boundView.scope['*'] = this.cursor.refine([this.collection.indexOf(item)]);
 			}
-			boundView.models['*'] = item;
-			if(this.view.itemAlias) boundView.models[this.view.itemAlias] = item;
+
+
+			if(this.view.itemAlias) boundView.scope[this.view.itemAlias] = item;
 
 			boundView.setBindingIndex(i);
 
@@ -5503,18 +3891,19 @@ kff.CollectionBinder = kff.createClass(
 			boundView = this.viewTemplate.clone();
 			boundView.setParentView(this.view);
 
-			if(i === undefined)
+			this.boundViews.push(boundView);
+			i = this.boundViews.length - 1;
+
+			if(this.filteredCollection === this.collection)
 			{
-				this.boundViews.push(boundView);
-				i = this.boundViews.length - 1;
+				boundView.scope['*'] = this.cursor.refine([i]);
 			}
 			else
 			{
-				this.boundViews.splice(i, 0, boundView);
+				boundView.scope['*'] = this.cursor.refine([this.collection.indexOf(item)]);
 			}
 
-			boundView.models['*'] = item;
-			if(this.view.itemAlias) boundView.models[this.view.itemAlias] = item;
+			if(this.view.itemAlias) boundView.scope[this.view.itemAlias] = item;
 
 			boundView.setBindingIndex(i);
 			boundView.rebindElement($element[0]);
@@ -5526,22 +3915,6 @@ kff.CollectionBinder = kff.createClass(
 		boundView.modelBindersMap.setView(boundView);
 
 		return boundView;
-	},
-
-	delegateModelEventsAll: function()
-	{
-		if(this.boundViews !== null)
-		{
-			for(var i = 0, l = this.boundViews.length; i < l; i++) this.boundViews[i].delegateModelEventsAll();
-		}
-	},
-
-	undelegateModelEventsAll: function()
-	{
-		if(this.boundViews !== null)
-		{
-			for(var i = 0, l = this.boundViews.length; i < l; i++) this.boundViews[i].undelegateModelEventsAll();
-		}
 	},
 
 	refreshBinders: function(force)
@@ -5563,11 +3936,7 @@ kff.CollectionBinder = kff.createClass(
 
 	getCollectionIndex: function(item)
 	{
-		if(this.collection instanceof kff.Collection)
-		{
-			return this.collection.indexOf(item)
-		}
-		else if(this.collection instanceof Array)
+		if(this.collection instanceof Array)
 		{
 			return kff.arrayIndexOf(this.collection, item);
 		}
@@ -5577,13 +3946,13 @@ kff.CollectionBinder = kff.createClass(
 
 
 kff.ModelView = kff.createClass({
-	extend: kff.BindingView
+	extend: kff.View
 },
 {
 	constructor: function(options)
 	{
-		kff.BindingView.call(this, options);
-		this.models['*'] = new kff.Model();
+		kff.View.call(this, options);
+		this.scope['*'] = new kff.Cursor({});
 	}
 });
 
@@ -6243,7 +4612,7 @@ kff.ValueBinder = kff.createClass(
 		{
 			this.getValue = this.getArrayValue;
 			this.setValue = this.setArrayValue;
-			this.compareValues = this.compareArrayValues;
+			this.compareValues = kff.compareArrays;
 		}
 		if(this.options.eventFilters && this.options.eventFilters[0])
 		{
@@ -6536,6 +4905,13 @@ kff.ViewFactory = kff.createClass(
 		return view;
 	},
 
+	getDefaultViewOptions: function(viewName)
+	{
+		var viewConfig = this.serviceContainer.getServiceConfigAnnotation(viewName);
+		if(typeof viewConfig === 'object' && viewConfig !== null && viewConfig.args instanceof Array) return this.serviceContainer.resolveParameters(viewConfig.args[0]);
+		else return null;
+	},
+
 	/**
 	 * Returns constructor function of the view. Used only as fallback in the
 	 * getPrecedingView method.
@@ -6696,30 +5072,6 @@ kff.Router = kff.createClass(
 			params = [];
 			if(this.routes[i].match(path, params))
 			{
-				if(this.params instanceof kff.Model)
-				{
-					var attrs = {};
-					var unset = [];
-					for(var key in params)
-					{
-						if(isNaN(parseFloat(key)) && params.hasOwnProperty(key))
-						{
-							attrs[key] = params[key];
-						}
-					}
-					this.params.each(function(key, val)
-					{
-						if(!(key in attrs))
-						{
-							unset.push(key);
-						}
-					});
-
-					attrs.unnamed = params.slice();
-
-					this.params.unset(unset);
-					this.params.set(attrs);
-				}
 				return { target: this.routes[i].getTarget(), params: params };
 			}
 		}
@@ -6804,7 +5156,6 @@ kff.FrontController = kff.createClass(
 		this.middlewares = options.middlewares || [];
 		this.dispatcher = options.dispatcher || null;
 		this.env = options.env || { document: document, window: window };
-		this.pendingRefresh = false;
 	},
 
 	/**
@@ -6834,12 +5185,10 @@ kff.FrontController = kff.createClass(
 
 		for(i = 0; i < destroyQueue.length; i++)
 		{
-			if(destroyQueue[i + 1]) destroyQueue[i].instance.on('destroy', kff.bindFn(destroyQueue[i + 1].instance, 'destroyAll'));
-			else destroyQueue[i].instance.on('destroy', kff.bindFn(this, 'destroyDone'));
+			destroyQueue[i].instance.destroyAll();
 		}
 
-		if(destroyQueue[0]) destroyQueue[0].instance.destroyAll();
-		else this.destroyDone();
+		this.destroyDone();
 	},
 
 	/**
@@ -6922,13 +5271,7 @@ kff.FrontController = kff.createClass(
 	 */
 	pushView: function(view)
 	{
-		var lastView = this.getLastView();
 		this.viewsQueue.push(view);
-		if(lastView)
-		{
-			lastView.instance.on('render', kff.bindFn(view.instance, 'init'));
-			lastView.instance.on('setState', kff.bindFn(view.instance, 'setState'));
-		}
 	},
 
 	/**
@@ -6939,15 +5282,8 @@ kff.FrontController = kff.createClass(
 	{
 		if(this.viewsQueue.length === 0) return;
 
-		var removedView = this.viewsQueue.pop(),
-			lastView = this.getLastView();
+		var removedView = this.viewsQueue.pop();
 
-		removedView.instance.off('render', kff.bindFn(this, 'cascadeState'));
-		if(lastView)
-		{
-			lastView.instance.off('render', kff.bindFn(removedView.instance, 'init'));
-			lastView.instance.off('setState', kff.bindFn(removedView.instance, 'setState'));
-		}
 		return removedView;
 	},
 
@@ -6973,16 +5309,15 @@ kff.FrontController = kff.createClass(
 
 		for(i = 0; i < destroyQueue.length; i++)
 		{
-			if(destroyQueue[i + 1]) destroyQueue[i].instance.on('destroy', kff.bindFn(destroyQueue[i + 1].instance, 'destroyAll'));
-			else destroyQueue[i].instance.on('destroy', kff.bindFn(this, 'startInit'));
+			destroyQueue[i].instance.destroyAll();
 		}
 
-		if(destroyQueue[0]) destroyQueue[0].instance.destroyAll();
-		else this.startInit();
+		this.startInit();
 
 		if(this.dispatcher)
 		{
-			this.dispatcher.trigger('route', {
+			this.dispatcher.trigger({
+				type: 'route',
 				state: state
 			});
 		}
@@ -7010,14 +5345,16 @@ kff.FrontController = kff.createClass(
 		}
 
 		this.newViewName = null;
-		if(this.getLastView()) this.getLastView().instance.on('render', kff.bindFn(this, 'cascadeState'));
-		if(this.viewsQueue[from]) this.viewsQueue[from].instance.init();
-		else this.cascadeState();
+
+		for(i = from; i < this.viewsQueue.length; i++)
+		{
+			this.viewsQueue[i].instance.init();
+		}
 	},
 
 	findSharedView: function(c1, c2)
 	{
-		var i,
+		var i, l,
 			c1a = this.getPrecedingViews(c1),
 			c2a = this.getPrecedingViews(c2),
 			c = null;
@@ -7078,23 +5415,51 @@ kff.FrontController = kff.createClass(
 	}
 });
 
-kff.Dispatcher = kff.createClass({
-	mixins: kff.EventsMixin
-},
+function filterByEventType(type)
+{
+	return function(o){ return o.type === type; };
+}
+
+kff.Dispatcher = kff.createClass(
 {
 	constructor: function(actions)
 	{
-		this.actions = {};
+		this.eventStream = new kff.EventStream();
+		this.actionStreams = {};
 		this.registerActions(actions);
 	},
 
 	createCallback: function(fn)
 	{
 		var dispatcher = this;
-		return function(event)
+		if(typeof fn !== 'function') {
+			throw new Error('Dispatcher action "' + fn + '" is not a function');
+		}
+		if(fn.length <= 1)
 		{
-			fn.call(null, event, dispatcher);
-		};
+			return function(event)
+			{
+
+				var nextEvent = fn.call(null, event);
+				if(nextEvent instanceof kff.EventStream)
+				{
+					nextEvent.on(dispatcher.f('trigger'));
+				}
+				else if(nextEvent) dispatcher.trigger(nextEvent);
+			};
+		}
+		else
+		{
+			return function(event)
+			{
+				var done = function(err, nextEvent)
+				{
+					if(err) return;
+					if(nextEvent) dispatcher.trigger(nextEvent);
+				};
+				fn.call(null, event, done);
+			};
+		}
 	},
 
 	registerActions: function(actions)
@@ -7104,24 +5469,34 @@ kff.Dispatcher = kff.createClass({
 		{
 			for(var action in actions)
 			{
-				if(!(actions[action] instanceof Array)) callbacks = [actions[action]];
-				else callbacks = actions[action];
-
-				if(!(action in this.actions)) this.actions[action] = [];
-
-				this.actions[action] = this.actions[action].concat(callbacks);
-
-				for(var i = 0; i < callbacks.length; i++)
-				{
-					this.on(action, this.createCallback(callbacks[i]));
+				if(typeof actions[action] !== 'function') {
+					throw new Error('Dispatcher action "' + action + '" is not a function');
 				}
+				this.actionStreams[action] = this.eventStream.filter(filterByEventType(action)).on(this.createCallback(actions[action]));
 			}
 		}
 	},
 
+	trigger: function(event)
+	{
+		this.eventStream.trigger(event);
+	},
+
+	on: function(type, fn)
+	{
+		if(!(type in this.actionStreams)) this.actionStreams[type] = this.eventStream.filter(filterByEventType(type));
+		this.actionStreams[type].on(this.createCallback(fn));
+	},
+
+	off: function(type, fn)
+	{
+		// if(type in this.actionStreams) this.actionStreams[action].on(this.createCallback(fn));
+	},
+
+
 	hasAction: function(action)
 	{
-		return action in this.actions;
+		return action in this.actionStreams;
 	}
 });
 
@@ -7140,12 +5515,12 @@ kff.App = kff.createClass(
 	 */
 	constructor: function(options)
 	{
-		var models, helpers, element, require, middlewares, dispatcher;
+		var scope, element, require, middlewares, dispatcher;
 		this.options = options = options || {};
-		models = options.models || {};
-		helpers = options.helpers || {};
+		scope = options.scope || {};
 		element = options.element || null;
-		require = options.require || kff.require;
+		require = options.require || null;
+		var modules = options.modules || null;
 		this.env = options.env || { document: document, window: window };
 		this.dispatcher = null;
 
@@ -7159,8 +5534,7 @@ kff.App = kff.createClass(
 				'kff.PageView': {
 					args: [{
 						element: element,
-						models: models,
-						helpers: helpers
+						scope: scope
 					}]
 				},
 				'kff.FrontController': {
@@ -7174,8 +5548,18 @@ kff.App = kff.createClass(
 					}],
 					shared: true
 				}
-			}
+			},
+			modules: modules
 		};
+
+		if(this.options.dispatcher)
+		{
+			config.services['kff.Dispatcher'] = {
+				args: [this.options.dispatcher.actions || {}]
+			};
+
+			config.services['kff.FrontController'].args[0].dispatcher = '@kff.Dispatcher';
+		}
 
 		this.serviceContainer = new kff.ServiceContainer(config, require);
 		if('parameters' in options) this.serviceContainer.registerParameters(options.parameters, true);
@@ -7211,15 +5595,6 @@ kff.App = kff.createClass(
 		{
 			frontController.setStateHandler(this.serviceContainer.resolveParameters(this.options.stateHandler));
 		}
-		if(this.options.dispatcher)
-		{
-			var dispatcher = this.serviceContainer.resolveParameters(this.options.dispatcher);
-			if(dispatcher && typeof dispatcher.registerActions === 'function')
-			{
-				if(this.options.actions) dispatcher.registerActions(this.options.actions);
-				frontController.setDispatcher(dispatcher);
-			}
-		}
 		if(this.options.defaultView)
 		{
 			frontController.setDefaultView(this.options.defaultView);
@@ -7249,4 +5624,4 @@ kff.App = kff.createClass(
 
 
 
-})(this);
+})();
